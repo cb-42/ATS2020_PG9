@@ -1,0 +1,65 @@
+---
+title: "PG9_Lung_Microbiome_Tutorial"
+author: "Christopher Brown"
+date: "January 22, 2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r libraries, message = FALSE}
+# This section contains typical libraries used in these analyses
+
+# I. universal data wrangling and visualization
+library(tidyverse)      # ggplot, dplyr, purrr, forcats, stringr... and other packages. See https://tidyverse.tidyverse.org/
+
+# II. formatting, plotting
+
+# III. machine learning & analysis packages
+library(vegan)          # decostand(), metaMDS(), scores(), rda(), ordispider(), adonis()
+```
+
+
+```{r load_16S_rawdata}
+# For ease of use, place the processed 16S data files of interest into the same directory as your current RStudio project
+# Best practices: keep a separate project for each experiment or combination of experiments
+# include a data folder within the project's directory to keep source files organized; also somewhat mitigates the risk of modifying them inadvertently
+
+# I. Read in .shared (counts of sequences assigned to OTU #s)
+# Includes basic processing with selection of OTUs > 0.1 % of the population
+otu_raw <- read.table("data/heterogeneity_shared.txt", row.names = 2, header = T)
+otu_trim <- otu_raw[, -c(1:2)]
+otu_trim <- as.matrix(otu_trim)
+otu_tmp <- vegan::decostand(otu_trim, "total") * 100
+otu_trim[which(otu_tmp < 0.1)] <- 0
+otu_good <- otu_trim[, which(colSums(otu_trim) > 0)]
+
+# Trim _S from end of rownames(otu_good); note that it may be useful to keep these well identifiers in some analyses
+rownames(otu_good) <- str_remove(rownames(otu_good), "_S\\d+")
+
+# It's a good idea to inspect the data regularly with tools such as dim(), str(), head(), tail(), summary()... This will help in catching errors earlier
+dim(otu_good) # dim(otu_good)[1] observations (samples) x dim(otu_good)[2] features (OTUs above .1% population threshold)
+otu_good[1:20, 1:20] # use other means of showing a glimpse of the data?
+
+
+# II. Read in cons.taxonomy (for each OTU: taxonomic levels down to Genus, if possible)
+# Note that OTUs are in rows here rather than columns
+# 2 imports are required due to the combination of 2 different separators  
+tax1 <- read.table("data/heterogeneity_0.03.cons.taxonomy.txt", sep = "\t", row.names = 1, header = T, colClasses = c("character", "numeric", "character"))
+tax2 <- read.table("data/heterogeneity_0.03.cons.taxonomy.txt", sep = ";", skip = 1, col.names = c("", "Phylum", "Class", "Order", "Family", "Genus", "")) %>% 
+  dplyr::select(-c(1, 7)) %>% 
+  purrr::map_df(stringr::str_replace, "\\(.*.\\)", "") %>%
+  purrr::map_df(as.factor)
+otu_taxonomy <- data.frame(OTU = rownames(tax1), Size = tax1[, 1], tax2, stringsAsFactors = FALSE)
+rownames(otu_taxonomy) <- rownames(tax1)
+
+# trim otu_taxonomy based on OTUs in otu_good
+otu_good_taxonomy <- otu_taxonomy[otu_taxonomy$OTU %in% colnames(otu_good), ]
+rownames(otu_good_taxonomy) <- intersect(rownames(otu_taxonomy), colnames(otu_good))
+otu_good_taxonomy <- as.data.frame(otu_good_taxonomy)
+
+dim(otu_good_taxonomy)
+otu_good_taxonomy[1:20,]
+```
