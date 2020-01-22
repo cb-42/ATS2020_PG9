@@ -4,10 +4,14 @@ author: "Christopher Brown"
 date: "January 22, 2020"
 output: pdf_document
 ---
+This report was built with R version `r getRversion()`. 
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+
+# I. Introduction
+Welcome, introduction goes here.
 
 ```{r libraries, message = FALSE}
 # This section contains typical libraries used in these analyses
@@ -21,6 +25,7 @@ library(tidyverse)      # ggplot, dplyr, purrr, forcats, stringr... and other pa
 library(vegan)          # decostand(), metaMDS(), scores(), rda(), ordispider(), adonis()
 ```
 
+# II. Data Preparation
 
 ```{r load_16S_rawdata}
 # For ease of use, place the processed 16S data files of interest into the same directory as your current RStudio project
@@ -62,4 +67,44 @@ otu_good_taxonomy <- as.data.frame(otu_good_taxonomy)
 
 dim(otu_good_taxonomy)
 otu_good_taxonomy[1:20,]
+```
+
+```{r metadata_wrangling, include = FALSE}
+# Load in metadata/environmental data, or create it
+
+# Examples of metadata creation using regular expressions (regex) in a tidyverse pipeline
+# Note that extracting metadata from sample names is much easier if naming conventions are consistent in terms of spelling and placement
+otu_df <- data.frame(decostand(otu_good, "total") * 100, Sample_name = row.names(otu_good), stringsAsFactors = FALSE) %>%
+  # Create Specimen_ctrl from first string of characters prior to first "_"
+  mutate(Specimen_ctrl = factor(case_when(str_detect(Sample_name, "^AE_") ~ "AE",
+                                       str_detect(Sample_name, "^Blank\\d_") ~ "Empty",
+                                       str_detect(Sample_name, "^Heparin_") ~ "Heparin",
+                                       str_detect(Sample_name, "^HomogCtrl_") ~ "HomogCtrl",
+                                       str_detect(Sample_name, "^IsoCtrl_") ~ "IsoCtrl",
+                                       str_detect(Sample_name, "^LPS_") ~ "LPS",
+                                       str_detect(Sample_name, "^PerfusionPBS_") ~ "PBS",
+                                       str_detect(Sample_name, "^WATERD|^waterC") ~ "WaterNeg",
+                                       str_detect(Sample_name, "^mock[CD]") ~ "Mock",
+                                       str_detect(Sample_name, "[:alnum:]") ~ "Specimen"), # for experimental groups, place after other steps because this regex would fill in values for controls (may or may not be ideal)
+                                levels = c("AE", "Empty", "Heparin", "HomogCtrl", "IsoCtrl", "LPS", "PBS", "WaterNeg", "Mock", "Specimen")
+                             )
+         ) %>%
+  # Create Organ
+  mutate(Organ = factor(case_when(str_detect(Sample_name, "_CECUM_") ~ "Cecum",
+                                  str_detect(Sample_name, "_LUNG_HOMOG") ~ "Lung",
+                                  str_detect(Sample_name, "_NASAL_") ~ "Nasal",
+                                  str_detect(Sample_name, "_TONGUE_") ~ "Tongue"),
+                        levels = c("Nasal", "Tongue", "Lung", "Cecum")
+                ) # sum(is.na(otu_df$Organ)) returns 32 (as expected, controls have NA in this column)
+         ) %>%
+  # Create Mouse
+  mutate(Mouse = as.numeric(str_extract(Sample_name, "(?<=(CR\\d|JAX\\d)_)\\d+") # numbers correspond to mice if a CR or JAX specimen
+              ) # sum(is.na(otu_df$Mouse)) returns 32 (as expected, the controls have NA in this column)
+         ) %>%
+  # metadata columns at front, followed by all of the count data
+  dplyr::select(Sample_name:Mouse, everything())
+  # note that the data is in wide format
+  
+otu_df$Specimen_ctrl %>% table() %>% sum() # 192: all samples/rows are accounted for
+otu_df$Organ %>% summary() %>% sum() # ditto; 32 NAs for organs
 ```
