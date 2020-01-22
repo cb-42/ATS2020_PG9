@@ -20,6 +20,7 @@ Welcome, introduction goes here.
 library(tidyverse)      # ggplot, dplyr, purrr, forcats, stringr... and other packages. See https://tidyverse.tidyverse.org/
 
 # II. formatting, plotting
+library(scales)         # used in formatting relative abundance % labels; dollar_format()
 
 # III. machine learning & analysis packages
 library(vegan)          # decostand(), metaMDS(), scores(), rda(), ordispider(), adonis()
@@ -107,4 +108,36 @@ otu_df <- data.frame(decostand(otu_good, "total") * 100, Sample_name = row.names
   
 otu_df$Specimen_ctrl %>% table() %>% sum() # 192: all samples/rows are accounted for
 otu_df$Organ %>% summary() %>% sum() # ditto; 32 NAs for organs
+```
+
+# III. Analysis of Controls
+[Descriptive text here]
+
+```{r analyze_ae}
+# 8 samples - perhaps ideal for use as an example of a control RA plot
+# don't include geometric mean
+ae_df <- filter(otu_df, Specimen_ctrl == "AE")
+
+# determine order of OTUs based on mean within selected specimens
+otu_order <- names(sort(colMeans(ae_df[, stringr::str_detect(colnames(ae_df), "Otu")]), decreasing = TRUE))
+
+# create mean sample
+sample_names <- ae_df$Sample_name
+temp <- dplyr::select(ae_df, otu_order[1:20])
+temp <- rbind(temp, apply(dplyr::select(ae_df, otu_order[1:20]), 2, mean))
+sample_names <- append(sample_names, "Arith_Mean")
+ae_df <- cbind(Sample_name = forcats::fct_inorder(sample_names), temp)
+ae_gg <- tidyr::gather(ae_df, key = OTU, value = Percentage, -stringr::str_which(colnames(ae_df), "Otu", negate = TRUE), factor_key = TRUE)
+levels(ae_gg$OTU) <- forcats::fct_inorder(paste0(otu_good_taxonomy[levels(ae_gg$OTU), ]$Genus, " (", levels(ae_gg$OTU), ")"))
+```
+
+```{r plot_ae, fig.width = 12, fig.height = 12}
+# Encourage participants to run these by commenting out a layer, altering 1 parameter to develop a deeper understanding of how to build up a ggplot object
+
+ggplot(data = ae_gg, aes(x = OTU, y = Percentage, fill = Sample_name)) + 
+  geom_col() + 
+  facet_grid(Sample_name ~ .) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5), legend.position = "top") +
+  scale_y_continuous(labels = scales::dollar_format(suffix = "%", prefix = "")) +
+  labs(title = "Cross-Comparison of AE Control Replicates", x = "OTU", y = "% Relative Abundance")
 ```
