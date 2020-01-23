@@ -21,6 +21,7 @@ library(tidyverse)      # ggplot, dplyr, purrr, forcats, stringr... and other pa
 
 # II. formatting, plotting
 library(scales)         # used in formatting relative abundance % labels; dollar_format()
+library(RColorBrewer)   # for generating custom palettes
 
 # III. machine learning & analysis packages
 library(vegan)          # decostand(), metaMDS(), scores(), rda(), ordispider(), adonis()
@@ -86,9 +87,9 @@ otu_df <- data.frame(decostand(otu_good, "total") * 100, Sample_name = row.names
                                        str_detect(Sample_name, "^PerfusionPBS_") ~ "PBS",
                                        str_detect(Sample_name, "^WATERD|^waterC") ~ "WaterNeg",
                                        str_detect(Sample_name, "^mock[CD]") ~ "Mock",
-                                       str_detect(Sample_name, "[:alnum:]") ~ "Specimen"), # for experimental groups, place after other steps because this regex would fill in values for controls (may or may not be ideal)
-                                levels = c("AE", "Empty", "Heparin", "HomogCtrl", "IsoCtrl", "LPS", "PBS", "WaterNeg", "Mock", "Specimen")
-                             )
+                                       str_detect(Sample_name, "^[:alnum:]+") ~ str_extract(Sample_name, "^[:alnum:]+")), # for experimental groups, place after other steps because this regex would fill in values for controls (may or may not be ideal)
+                                levels = c("CR1", "CR2", "JAX1", "JAX2", "AE", "Empty", "Heparin", "HomogCtrl", "IsoCtrl", "LPS", "PBS", "WaterNeg", "Mock")
+                )
          ) %>%
   # Create Organ
   mutate(Organ = factor(case_when(str_detect(Sample_name, "_CECUM_") ~ "Cecum",
@@ -140,4 +141,36 @@ ggplot(data = ae_gg, aes(x = OTU, y = Percentage, fill = Sample_name)) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5), legend.position = "top") +
   scale_y_continuous(labels = scales::dollar_format(suffix = "%", prefix = "")) +
   labs(title = "Cross-Comparison of AE Control Replicates", x = "OTU", y = "% Relative Abundance")
+```
+
+\newpage
+# IV. PCA  
+[Descriptive text here]
+
+```{r pal_prep, fig.width=8, include=F}
+# for PCA ordinations; choose an 9 that covers the maximum number of factor levels (conditions) within a variable of interest
+pcapal <- brewer.pal(9,"Set1")
+```
+
+```{r pca_prep}
+# example: filter out controls
+otu_good_spc <- dplyr::filter(otu_df, !(is.na(Organ))) %>%
+  droplevels() # remove levels that are no longer present due to filtering
+
+# PCA of all data (non-control)
+otu_good_spc_hel <- decostand(dplyr::select(otu_good_spc, contains("Otu")), "hellinger") # use OTU columns only
+otu_good_spc_pca <- rda(otu_good2_hel)
+
+(summary(otu_good_spc_pca)) # 0.1639 0.10222 0.08503 proportion explained by first 3 axes
+
+set.seed(8947) # permanova
+adonis(otu_good_spc_hel~otu_good_spc$Specimen_ctrl, method="euclidean", permutations = 10000) # 9.999e-05 ***
+```
+
+```{r spider_pca, fig.height=10, fig.width=10}
+plot(otu_good_spc_pca, type = "n", font = 2, font.lab = 2, xlab = "PC1 (16.39% Explained)", ylab = "PC2 (10.22% Explained)", main = "PCA of Specimen Origin, colored by Organ", display = "sites")
+points(otu_good_spc_pca, pch = 19, col = pcapal[as.numeric(otu_good_spc$Organ)])
+vegan::ordispider(otu_good_spc_pca, otu_good_spc$Specimen_ctrl, label = TRUE)
+legend("topright", levels(otu_good_spc$Organ), pch = 19, col = pcapal, title = "Organ")
+legend("bottomright", legend = "Permanova: Difference between Specimen Origin: 9.999e-05") # Should signifiance test be include in the plot?
 ```
