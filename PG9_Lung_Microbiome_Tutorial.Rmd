@@ -119,6 +119,53 @@ otu_df$specimen <- as.character(otu_df$specimen) # let's convert 'specimen' back
 # otu_df$Organ %>% summary() %>% sum() # ditto; 32 NAs for organs
 ```
 
+# III. Comparing Community Composition
+
+## Visualization techniques
+
+### PCA Ordination
+
+### Trees and heat maps
+
+### Rank abundance
+
+## Hypothesis testing
+
+### PERMANOVA (adonis)
+
+### mvabund
+
+### constrained ordination
+
+
+# IV. Relative Abundance of Key Community Members
+
+## Identifying enriched taxonomic groups
+
+### LEfSe
+
+### mvabund
+
+### Random forest (mean decrease in accuracy)
+Note - this depends on whether we're using regression or classification.
+
+
+# V. Community Diversity
+
+## α-diversity: within specimens
+
+### Richness - how many unique taxa?
+### Evenness - how evenly distributed?
+
+Relative abundance plots can be used here
+
+## 𝛽-diversity - across specimens  
+
+### Bray-Curtis
+
+### Unifrac
+
+
 # III. Analysis of Controls
 [Descriptive text here]
 
