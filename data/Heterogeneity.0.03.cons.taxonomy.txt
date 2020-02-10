@@ -121,7 +121,7 @@ Otu00119	2720	Bacteria(100);Firmicutes(100);Clostridia(100);Clostridiales(100);L
 Otu00120	2706	Bacteria(100);Firmicutes(100);Clostridia(100);Clostridiales(100);Lachnospiraceae(100);unclassified(100);
 Otu00121	2704	Bacteria(100);"Bacteroidetes"(100);"Bacteroidia"(100);"Bacteroidales"(100);Bacteroidaceae(100);Bacteroides(100);
 Otu00122	2683	Bacteria(100);"Proteobacteria"(100);Gammaproteobacteria(100);Xanthomonadales(100);Xanthomonadaceae(100);Lysobacter(100);
-Otu00123	2642	Bacteria(100);"Proteobacteria"(100);Gammaproteobacteria(100);Alteromonadales(100);Idiomarinaceae(100);unclassified(100);
+Otu00123	2642	Bacteria(100);"Proteobacteria"(100);Gammaproteobacteria(100);Alteromonadales(100);t(100);unclassified(100);
 Otu00124	2620	Bacteria(100);"Actinobacteria"(100);Actinobacteria(100);Coriobacteriales(100);Coriobacteriaceae(100);Atopobium(100);
 Otu00125	2600	Bacteria(100);Firmicutes(100);Clostridia(100);Clostridiales(100);Ruminococcaceae(99);unclassified(99);
 Otu00126	2570	Bacteria(100);Firmicutes(100);Clostridia(100);Clostridiales(100);Lachnospiraceae(100);unclassified(100);
