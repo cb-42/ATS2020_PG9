@@ -127,7 +127,71 @@ otu_df$specimen <- as.character(otu_df$specimen) # let's convert 'specimen' back
 
 ### Trees and heat maps
 
-### Rank abundance
+### 3.3 Rank abundance
+
+```{r prep_ra}
+# First we need to prepare the data: controls in one group, lung tissue in another
+# Order the data by most abundance OTU in lung tissue
+# Include an errorbar
+# Color by phyla
+
+ra_df <- otu_df %>% # Note at this is just one of several possible approaches to filtering to retain the correct rows
+  filter((reagent_tissue == "Control") | (tissue_type == "Lung")) %>% # 65 specimens
+  droplevels() # remove factor levels with no remaining observations - saves potential headaches in downstream wrangling and visualizations
+
+# Determine the order of OTUs based on means within Lung specimens
+otu_order <- names(sort(colMeans(filter(ra_df, tissue_type == "Lung")[, stringr::str_detect(colnames(ra_df), "Otu")]), decreasing = TRUE))
+
+# Keep top 20 OTUs, then reshape the dataframe from wide to long format
+g_df <- ra_df %>%
+  select(str_which(colnames(ra_df), "Otu", negate = TRUE), colnames(ra_df[, otu_order[1:20]])) %>% # Keep non-OTU columns, followed by the 20 most abundant OTU columns
+  gather(key = OTU, value = Percentage, -str_which(colnames(ra_df), "Otu", negate = TRUE), factor_key = TRUE) # factor_key is important because we care about the order (clevels) in OTU
+
+# dimensions have gone from 65 745 to 1300 17
+
+# Generate mean and sem for each group
+agg_df <- g_df %>%
+  group_by(reagent_tissue, OTU) %>%
+  summarize(Mean_perc = mean(Percentage), SEM = sqrt(var(Percentage)/length(Percentage))) %>%
+  ungroup()
+```
+
+```{r plot_ra_basic, fig.height=6, fig.width=12}
+(p <- ggplot(agg_df, aes(x = OTU, y = Mean_perc, fill = reagent_tissue)) + 
+  geom_col() +
+  facet_grid(reagent_tissue ~ .))
+```
+
+Let's add an errorbar and improve the visual aesthetics.
+
+```{r plot_ra_improved, fig.height=6, fig.width=12}
+# Add an errorbar
+(q <- p + geom_errorbar(aes(ymin = Mean_perc - SEM, ymax = Mean_perc + SEM, width = 0.3)))
+
+# Clear background + modify theme (rotate x-axis labels, reposition legend)
+(q <- q + theme_bw() + # note that a theme_ layer added after other other theme modifications will remove these prior modifications
+    theme(panel.grid = element_blank(), axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "top"))
+```
+
+Adding Genus labels to Otu identifiers
+
+```{r otu_lab, fig.height=6, fig.width=12}
+# Add Genus levels to the OTU Number
+levels(agg_df$OTU) <- paste_tax(levels(agg_df$OTU))
+# equivalent to:
+# fct_inorder(paste0(otu_good_taxonomy[levels(agg_df$OTU), ]$Genus, " (", levels(agg_df$OTU), ")"))
+
+ggplot(agg_df, aes(x = OTU, y = Mean_perc, fill = fct_rev(reagent_tissue))) + 
+  geom_col() +
+  facet_grid(fct_rev(reagent_tissue) ~ .) +
+  geom_errorbar(aes(ymin = Mean_perc - SEM, ymax = Mean_perc + SEM, width = 0.3)) + 
+  theme_bw() +
+  theme(panel.grid = element_blank(), axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "top", plot.margin = unit(c(0.5,0.5,0.5,1),"cm")) + 
+  scale_y_continuous(labels = unit_format(suffix = "%")) + 
+  labs(title="Comparison of Lung Tissue and Controls", subtitle = "Ranked by lung tissue specimens", y = "% Relative Abundance")
+```
+
+
 
 ## Hypothesis testing
 
