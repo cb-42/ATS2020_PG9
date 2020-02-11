@@ -197,12 +197,33 @@ heat_df <- otu_lung %>%
   # ungroup()
 ```
 
-```{r heatmap_plot, fig.height=8, fig.width=12}
+```{r ggheatmap, fig.height=8, fig.width=12}
 # Note that the OTU levels are sorted in reverse order of abundance here - we could adjust this if desired.
 ggplot(heat_df, aes(x = specimen, y = OTU)) +
   geom_tile(aes(fill = Percentage)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1), plot.margin = unit(c(0.5,0.5,0.5,1),"cm")) +
   scale_fill_gradient(low = "white", high = "dark blue")
+```
+
+```{r dendro_heatmap, fig.height=8, fig.width=12}
+# Unfortunately, filtering and other tidyverse functions strip rownames, but rownames are useful for pulling information out of matrices.
+# Fortunately, there is a function to easily put the specimen column back into rownames
+heat_df <- dplyr::filter(otu_df, tissue_type == "Lung") %>%
+  droplevels() %>% 
+  column_to_rownames("specimen") %>%
+  select(otu_order[1:20])
+
+# create Bray-Curtis matrix for specimens
+bc_lung_spec <- vegdist(select(heat_df, otu_order[1:20]), method = "bray")
+# The linkage method used will depend on the nature of the data
+clust_lung_spec <- hclust(bc_lung_spec, method = "average")
+
+# create Bray-Curtis matrix for OTUs
+bc_lung_otu <- vegdist(t(select(heat_df, otu_order[1:20])), method = "bray")
+clust_lung_otu <- hclust(bc_lung_otu, method = "average")
+
+# Create the heatmap with dendrograms
+heatmap(as.matrix(select(heat_df, str_which(colnames(heat_df), "Otu"))), Rowv = as.dendrogram(clust_lung_spec), Colv = as.dendrogram(clust_lung_otu), margins=c(5,0))
 ```
 
 ### 3.1.3 Rank abundance  
@@ -219,7 +240,7 @@ ra_df <- otu_df %>% # Note at this is just one of several possible approaches to
   droplevels() # remove factor levels with no remaining observations - saves potential headaches in downstream wrangling and visualizations
 
 # Determine the order of OTUs based on means within Lung specimens
-otu_order <- names(sort(colMeans(filter(ra_df, tissue_type == "Lung")[, stringr::str_detect(colnames(ra_df), "Otu")]), decreasing = TRUE))
+otu_order <- names(sort(colMeans(filter(ra_df, tissue_type == "Lung")[, str_detect(colnames(ra_df), "Otu")]), decreasing = TRUE))
 
 # Keep top 20 OTUs, then reshape the dataframe from wide to long format
 g_df <- ra_df %>%
