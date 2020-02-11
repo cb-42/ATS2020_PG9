@@ -43,11 +43,20 @@ library(tidyverse)      # ggplot, dplyr, purrr, forcats, stringr... and other pa
 # II. formatting, plotting
 library(scales)         # used in formatting relative abundance % labels; dollar_format()
 library(RColorBrewer)   # for generating custom palettes
+library(knitr)          # kable(), for displaying nicer tables in html/pdf output
 
 # III. machine learning & analysis packages
 library(vegan)          # decostand(), metaMDS(), scores(), rda(), ordispider(), adonis()
+library(mvabund)
 ```
 
+## 1.5 Notes on R code syntax, best practices  
+  - package_name::function_name()  
+      - Main reason to do this is to avoid calling the wrong function of the same name, as we'll see with dplyr::select(). Also informs users what library a function is from. 
+  - Give your objects meaningful, formulaic names (not always easy when you create dozens or hundreds of them)  
+  - Include comments explaining what your code does (the primary beneficiary will likely be your future self)  
+  - Become familiar with and make use of the pipe operator: `%>%`. This can drastically improve the efficiency of your time spent coding, and is a natural fit for data wrangling workflows.
+  
 # II. Data Preparation
 We will be using 16S data resulting from mothur processing and metadata that was previously generated. All of this data is available [here](https://github.com/dicksonlunglab/mouse_lung_microbiome_variability/tree/master/mouse_lung_microbiome_heterogeneity).
 
@@ -333,24 +342,77 @@ ggplot(agg_df, aes(x = OTU, y = Mean_perc, fill = Phylum)) +
 ```
 
 
-## Hypothesis testing
+## 3.2 Hypothesis testing  
 
-### PERMANOVA (adonis)
+### 3.2.1 PERMANOVA (adonis)  
+The following is an example of a permanova implementation using vegan::adonis().  
 
-### mvabund
+```{r adonis}
+# This code was used previously when we prepared our PCA ordination
+set.seed(8947) # setting a seed allows for reproducibility - both lines need to be run together
+adonis(otu_lung_hel~otu_lung$vendor, method="euclidean", permutations = 10000) # 9.999e-05 ***
+# The left hand side of the formula is the transformed data, and the right hand side is a vector (column) container the group identifiers of interest.
+```
 
-### constrained ordination
+### 3.2.2 mvabund  
+This may take some time to finish (about 4.5 minutes on a powerful machine), so while the model is running, we'll discuss some other topics. [additional explanation, topics here]. For code chunks that take a while to execute, whether due to statistical analyses or visualizations, it may be beneficial to set the code chunk cache parameter to TRUE. This will enable you to recreate your report much more quickly when making small changes elsewhere.
 
+```{r mvabund, cache=TRUE}
+a <- Sys.time() # Sometimes this can take a while, so it might be useful to keep track of the time with start/stop points to allow us to compute the duration.
+otu_mva <- mvabund(otu_lung[,str_which(colnames(otu_lung), "Otu")]) # select only lung specimens and Otu columns
+otu_ven_many <- manyglm(otu_mva ~ otu_lung$vendor)
+otu_mva_results <- anova(otu_ven_many, p.uni="adjusted")
+b <- Sys.time()
+b - a
 
-# IV. Relative Abundance of Key Community Members
+plot(otu_ven_many) # Residual plot
+otu_mva_results$table # Signif
 
-## Identifying enriched taxonomic groups
+# Analysis of Deviance Table
+# 
+# Model: manyglm(formula = otu_mva ~ otu_lung$vendor)
+# 
+# Multivariate test:
+#                 Res.Df Df.diff   Dev Pr(>Dev)    
+# (Intercept)         39                           
+# otu_lung$vendor     38       1 797.9    0.001 ***
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+```
 
-### LEfSe
+### 3.2.3 constrained ordination  
+Example using vegan. [descriptive text here]
 
-### mvabund
+```{r cca}
 
-### Random forest (mean decrease in accuracy)
+```
+
+# IV. Relative Abundance of Key Community Members  
+
+## 4.1 Identifying enriched taxonomic groups  
+
+### 4.1.1 LEfSe  
+
+### 4.1.2 mvabund  
+We'll make use of our previous mvabund results and examine whether there are any significant OTUs.  
+
+```{r mva_pvals}
+# restructure, sort, filter to retrieve significant OTUs
+otu_ven_sigpvals <- data.frame(OTU = colnames(otu_mva_results$uni.p), uni_p = otu_mva_results$uni.p[2,]) %>%
+  filter(uni_p <= .05) %>%
+  arrange(uni_p)
+
+# label OTUS
+otu_ven_sigpvals$OTU <- paste_tax(otu_ven_sigpvals$OTU)
+```
+
+Here is an example of formating a dataframe (in this case containing pvalues) for display in a report.  
+
+```{r kable_mva_pvals, fig.height = 8, fig.width = 8}
+knitr::kable(otu_ven_sigpvals, caption = "Vendors, Significant OTUs (.05)", align = "l")
+```
+
+### 4.1.3 Random forest (mean decrease in accuracy)  
 Note - this depends on whether we're using regression or classification.
 
 
