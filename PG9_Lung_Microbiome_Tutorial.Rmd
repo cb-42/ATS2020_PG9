@@ -186,11 +186,23 @@ legend("bottomright", legend = "Permanova: Difference between Specimen Origin: 9
 [Descriptive text here]  
 
 ```{r heatmap_prep}
+# Determine the order of OTUs based on means within Lung specimens
+otu_order <- names(sort(colMeans(otu_lung[, stringr::str_detect(colnames(otu_lung), "Otu")]), decreasing = TRUE))
 
+heat_df <- otu_lung %>% 
+  select(specimen, log_IL1a, otu_order[1:20]) %>%
+  gather(key = OTU, value = Percentage, -log_IL1a, -specimen, factor_key = TRUE) #%>%
+  # group_by(OTU) %>%
+  # summarize(Mean_perc = mean(Percentage)) %>%
+  # ungroup()
 ```
 
-```{r heatmap_plot}
-
+```{r heatmap_plot, fig.height=8, fig.width=12}
+# Note that the OTU levels are sorted in reverse order of abundance here - we could adjust this if desired.
+ggplot(heat_df, aes(x = specimen, y = OTU)) +
+  geom_tile(aes(fill = Percentage)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), plot.margin = unit(c(0.5,0.5,0.5,1),"cm")) +
+  scale_fill_gradient(low = "white", high = "dark blue")
 ```
 
 ### 3.1.3 Rank abundance  
