@@ -1,7 +1,7 @@
 ---
 title: "PG9_Lung_Microbiome_Tutorial"
 author: "Christopher Brown"
-date: "February 10, 2020 (updated)"
+date: "February 11, 2020 (updated)"
 output: html_document
 ---
 This report was built with R version `r getRversion()`. 
@@ -11,7 +11,28 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 # I. Introduction
-Welcome, introduction goes here.
+Welcome. [introduction goes here]
+
+## 1.1 Why RStudio?
+There are many quality of life features that aid in making your time spent coding more efficient and reproducible. Many keyboard shortcuts exist in RStudio for common tasks. Navigate to Help > Keyboard Shortcuts Help, for a full list.  
+
+## 1.2 Why RMarkdown?  
+  - Easily combine narrative, code, statistics, and visualizations.
+  - Reproducibility
+  - Variety of reporting formats: pdf, html, slides... etc  
+
+## 1.3 Navigating RStudio & an RMarkdown script  
+RMarkdown documents consist of narrative of text such as this and code chunks such as the one below. Code chunks are enclosed within two pairs of three backticks (for reference a backtick is denoted by `).
+
+```{r example_code_chunk}
+# This is an example of a comment within a code chunk. The # symbol means that any text following it should not be treated as R code.
+# When R code is run in a code chunk it will be displayed inline - that is, within the document - just below the current code chunk.
+# The next line is R code, and it will be executed when this code chunk is run. Run with: green arrow in uppe right of this section, cmd + enter (mac), ctrl + enter (pc).
+paste("Welcome to ATS 2020, PG9", "-", "A Hands-On Introduction to Studying the Lung Microbiome")
+```
+
+## 1.4 Library Load  
+Before we begin bringing in the data to begin our analysis, we need to load the libraries that we'll use. Libraries contain additional code (primarily functions) and/or data that expand R's base functionality. A good practice is to keep a code chunk near the top of your script that contains all the libraries that are utilized in the analysis, so it's easy to keep track of all of the dependencies that your code has.
 
 ```{r libraries, message = FALSE}
 # This section contains typical libraries used in these analyses
@@ -177,9 +198,9 @@ Adding Genus labels to Otu identifiers
 
 ```{r otu_lab, fig.height=6, fig.width=12}
 # Add Genus levels to the OTU Number
-levels(agg_df$OTU) <- paste_tax(levels(agg_df$OTU))
+levels(agg_df$OTU) <- fct_inorder(paste0(otu_good_taxonomy[levels(agg_df$OTU), ]$Genus, " (", levels(agg_df$OTU), ")"))
 # equivalent to:
-# fct_inorder(paste0(otu_good_taxonomy[levels(agg_df$OTU), ]$Genus, " (", levels(agg_df$OTU), ")"))
+# cbmbtools::paste_tax(levels(agg_df$OTU))
 
 ggplot(agg_df, aes(x = OTU, y = Mean_perc, fill = fct_rev(reagent_tissue))) + 
   geom_col() +
@@ -191,6 +212,29 @@ ggplot(agg_df, aes(x = OTU, y = Mean_perc, fill = fct_rev(reagent_tissue))) +
   labs(title="Comparison of Lung Tissue and Controls", subtitle = "Ranked by lung tissue specimens", y = "% Relative Abundance")
 ```
 
+How do we adjust the legend and facet labels?
+
+```{r ra_factor, fig.height=6, fig.width=12}
+# Although it is possible to adjust the values and labels within the ggplot workflow, perhaps the simplest approach would be to correct the reagent_tissue column values and factor levels prior to plotting
+agg_df$reagent_tissue <- fct_recode(agg_df$reagent_tissue, Lung = "Tissue") %>%
+  fct_relevel("Lung")
+
+ggplot(agg_df, aes(x = OTU, y = Mean_perc, fill = reagent_tissue)) + 
+  geom_col() + # use show.legend = FALSE to remove the legend entirely
+  facet_grid(reagent_tissue ~ .) +
+  geom_errorbar(aes(ymin = Mean_perc - SEM, ymax = Mean_perc + SEM, width = 0.3)) + 
+  theme_bw() +
+  theme(panel.grid = element_blank(), axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "top", plot.margin = unit(c(0.5,0.5,0.5,1),"cm"), legend.title = element_blank()) + 
+  scale_y_continuous(labels = unit_format(suffix = "%")) + 
+  labs(title="Comparison of Lung Tissue and Controls", subtitle = "Ranked by lung tissue specimens", y = "% Relative Abundance")
+  # for further customizing of the legend, try adding a guide_legend() layer
+```
+
+How can we use fill color to show the phyla to which each OTU belongs?
+
+```{r ra_phy_prep}
+# First we need to prepare the taxonomic data
+```
 
 
 ## Hypothesis testing
