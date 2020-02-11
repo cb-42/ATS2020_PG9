@@ -167,12 +167,17 @@ otu_order <- names(sort(colMeans(filter(ra_df, tissue_type == "Lung")[, stringr:
 g_df <- ra_df %>%
   select(str_which(colnames(ra_df), "Otu", negate = TRUE), colnames(ra_df[, otu_order[1:20]])) %>% # Keep non-OTU columns, followed by the 20 most abundant OTU columns
   gather(key = OTU, value = Percentage, -str_which(colnames(ra_df), "Otu", negate = TRUE), factor_key = TRUE) # factor_key is important because we care about the order (clevels) in OTU
+  
+# Join Phylum column from taxonomy table
+tax_df <- otu_good_taxonomy[otu_good_taxonomy[,"OTU"] %in% otu_order[1:20], c("OTU", "Phylum")] # Keep only the rows from ranked OTU vector, and OTU + whatever taxonomic level to use for filling bars
+tax_df$OTU <- factor(tax_df$OTU, levels = otu_order[1:20]) # set OTU factor levels to be in the same order as in g_df. If this is not done, our OTU column will be coerced to a character vector when we join (we'll lose the levels)
+g_df <- inner_join(g_df, tax_df, by = "OTU")
 
 # dimensions have gone from 65 745 to 1300 17
 
 # Generate mean and sem for each group
 agg_df <- g_df %>%
-  group_by(reagent_tissue, OTU) %>%
+  group_by(reagent_tissue, OTU, Phylum) %>%
   summarize(Mean_perc = mean(Percentage), SEM = sqrt(var(Percentage)/length(Percentage))) %>%
   ungroup()
 ```
@@ -232,8 +237,18 @@ ggplot(agg_df, aes(x = OTU, y = Mean_perc, fill = reagent_tissue)) +
 
 How can we use fill color to show the phyla to which each OTU belongs?
 
-```{r ra_phy_prep}
-# First we need to prepare the taxonomic data
+```{r ra_phy_prep, fig.height=6, fig.width=12}
+# First we need to prepare the taxonomic data - In this case we did this earlier in our overall RA data prep.
+
+# Next, simply change the fill parameter to Phylum and rerun the ggplot code
+ggplot(agg_df, aes(x = OTU, y = Mean_perc, fill = Phylum)) + 
+  geom_col() + # use show.legend = FALSE to remove the legend entirely
+  facet_grid(reagent_tissue ~ .) +
+  geom_errorbar(aes(ymin = Mean_perc - SEM, ymax = Mean_perc + SEM, width = 0.3)) + 
+  theme_bw() +
+  theme(panel.grid = element_blank(), axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "top", plot.margin = unit(c(0.5,0.5,0.5,1),"cm"), legend.title = element_blank()) + 
+  scale_y_continuous(labels = unit_format(suffix = "%")) + 
+  labs(title="Comparison of Lung Tissue and Controls", subtitle = "Ranked by lung tissue specimens", y = "% Relative Abundance")
 ```
 
 
