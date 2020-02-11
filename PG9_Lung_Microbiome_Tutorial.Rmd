@@ -41,13 +41,14 @@ Before we begin bringing in the data to begin our analysis, we need to load the 
 library(tidyverse)      # ggplot, dplyr, purrr, forcats, stringr... and other packages. See https://tidyverse.tidyverse.org/
 
 # II. formatting, plotting
-library(scales)         # used in formatting relative abundance % labels; dollar_format()
-library(RColorBrewer)   # for generating custom palettes
+library(scales)         # used in formatting relative abundance % labels; unit_format()
+library(RColorBrewer)   # brewer.pal() for generating custom palettes
 library(knitr)          # kable(), for displaying nicer tables in html/pdf output
 
 # III. machine learning & analysis packages
 library(vegan)          # decostand(), metaMDS(), scores(), rda(), ordispider(), adonis()
-library(mvabund)
+library(mvabund)        # mvabund(), manyglm()
+library(randomForest)   # randomForest()
 ```
 
 ## 1.5 Notes on R code syntax, best practices  
@@ -415,6 +416,65 @@ knitr::kable(otu_ven_sigpvals, caption = "Vendors, Significant OTUs (.05)", alig
 ### 4.1.3 Random forest (mean decrease in accuracy)  
 Note - this depends on whether we're using regression or classification.
 
+```{r randomForest, cache = TRUE}
+# exclude Cage, select 42-Day Experiments
+rf_df <- dplyr::filter(otu_df, tissue_type == "Lung") %>% 
+  dplyr::select(vendor, str_which(colnames(otu_df), "Otu")) %>% 
+  droplevels()
+  
+a <- Sys.time()
+set.seed(3462)
+rf_ven <- randomForest(vendor ~ ., data = rf_df, importance = T)
+varImpPlot(rf_ven, scale = F)
+b <- Sys.time()
+b-a
+
+varImpPlot(rf_ven, scale = F)
+```
+
+Let's run the random forest model 100 times (note: this took around 30 seconds on a powerful machine).
+
+```{r many_rf, cache = TRUE}
+a <- Sys.time()
+nforest <- 100
+set.seed(3462)
+rf_list <- vector("list", nforest)
+for (i in seq_along(1:nforest)) {
+    rf_list[[i]] <- randomForest(vendor ~ ., data = rf_df, importance = T)
+}
+b <- Sys.time()
+b-a
+
+# Extract the feature importances
+fi_df <- purrr::map(rf_list, ~{.[["importance"]][, 3]}) %>%
+  unlist() %>%
+  data.frame(Feature = names(.), MeanDecreaseAccuracy = .)
+
+meas <- colnames(fi_df)[2] # "MeanDecreaseAccuracy"
+
+# Identify the top features
+top_feat <- fi_df %>% dplyr::group_by(Feature) %>%
+  summarize(`:=`(!!meas, mean(.data[[meas]]))) %>%
+  arrange(desc(.data[[meas]])) %>% 
+        head(25) %>%
+  droplevels()
+
+# Retain only the top features
+fi_df <- dplyr::filter(fi_df, Feature %in% top_feat$Feature) %>% 
+        droplevels()
+fi_df$Feature <- forcats::fct_reorder(fi_df$Feature, fi_df[, 2], .fun = mean, .desc = TRUE)
+levels(fi_df$Feature) <- paste_tax(levels(fi_df$Feature))
+```
+
+Next we'll create boxplots of the feature importance over the 100 random forest runs.
+
+```{r rf_feature_importance, fig.height=10, fig.width=10, cache = TRUE}
+ggplot(fi_df, aes(x = Feature, y = fi_df[, 2])) + geom_boxplot(outlier.alpha = 0.4) + 
+  theme_bw() + 
+  labs(y = meas, title = paste0("Feature Importance: vendor ~ microbiome"), subtitle = paste0("Model: rf_df \nRuns: ", length(rf_list), ", mtry: ", rf_list[[1]]$mtry)) + 
+  coord_flip() + 
+  scale_x_discrete(limits = rev(levels(fi_df$Feature)))
+```
 
 # V. Community Diversity
 
