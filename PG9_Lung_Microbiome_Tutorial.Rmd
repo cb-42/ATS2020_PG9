@@ -1,7 +1,7 @@
 ---
 title: "PG9_Lung_Microbiome_Tutorial"
 author: "Christopher Brown"
-date: "February 11, 2020 (updated)"
+date: "February 13, 2020 (updated)"
 output: html_document
 ---
 This report was built with R version `r getRversion()`. 
@@ -14,10 +14,10 @@ knitr::opts_chunk$set(echo = TRUE)
 Welcome. [introduction goes here - reminder to download RStudio/necessary packages if attendees haven't already done so]  
 
 ## 1.1 Why RStudio?
-There are many quality of life features that aid in making your time spent coding more efficient and reproducible. Many keyboard shortcuts exist in RStudio for common tasks. Navigate to Help > Keyboard Shortcuts Help, for a full list.  
+There are many quality of life features that aid in making your time spent coding more efficient and reproducible. For example, many keyboard shortcuts exist in RStudio for common tasks. Navigate to Help > Keyboard Shortcuts Help, for a full list. There are many other useful features, but a full discussion of them is outside the scope of this presentation.  
 
 ## 1.2 Why RMarkdown?  
-  - Easily combine narrative, code, statistics, and visualizations.  
+  - Easily combine narrative, code, statistics, and visualizations in one document.  
   - Reproducibility  
   - Generate high quality reports in a variety of formats: pdf, html, slides... etc  
 
@@ -25,9 +25,12 @@ There are many quality of life features that aid in making your time spent codin
 RMarkdown documents consist of narrative of text such as this and code chunks such as the one below. Code chunks are enclosed within two pairs of three backticks (for reference a backtick is denoted by `).  
 
 ```{r example_code_chunk}
-# This is an example of a comment within a code chunk. The # symbol means that any text following it should not be treated as R code.
+# This is an example of a comment within a code chunk.
+# The # symbol means that any text following it should not be treated as R code.
 # When R code is run in a code chunk it will be displayed inline - that is, within the document - just below the current code chunk.
-# The next line is R code, and it will be executed when this code chunk is run. Run with: green arrow in uppe right of this section, cmd + enter (mac), ctrl + enter (pc).
+# The first line without a # symbol is R code, and it will be executed when this code chunk is run.
+# To execute an entire code chunk: green arrow in upper right of this section:
+# Alternatively, place your cursor on the line with R code, then use: cmd + enter (mac), ctrl + enter (pc)
 paste("Welcome to ATS 2020, PG9", "-", "A Hands-On Introduction to Studying the Lung Microbiome")
 ```
 
@@ -193,7 +196,8 @@ ggplot(avg_abs_df, aes(x = Type, y = mean_DNA_copies, fill = Type)) +
   scale_y_log10() + # We could convert to log10 scale prior to plotting, or we can do it on the fly
   # geom_dotplot(data = abs_df, aes(y = DNA_copies_per_ul), binaxis = "y", dotsize = .6, stackdir = "center", stackratio = 1.5) +
   geom_jitter(data = abs_df, aes(y = DNA_copies_per_ul), shape = 1, size = 2) + # shape 1 is an unfilled circle
-  theme_bw()
+  theme_bw() +
+  labs(x = "Specimen or Control Type", y = "log10 mean_DNA_copies")
 ```
 
 # IV. Comparing Community Composition
@@ -435,13 +439,7 @@ anova(cage_cca)
 
 ## 5.1 Identifying enriched taxonomic groups  
 
-### 5.1.1 LEfSe  
-
-```{r}
-# library(lefse)
-```
-
-### 5.1.2 mvabund  
+### 5.1.1 mvabund  
 We'll make use of our previous mvabund results and examine whether there are any significant OTUs.  
 
 ```{r mva_pvals}
@@ -461,7 +459,7 @@ Here is an example of formating a dataframe (in this case containing pvalues) fo
 knitr::kable(otu_ven_sigpvals, caption = "Vendors, Significant OTUs (.05)", align = "l")
 ```
 
-### 5.1.3 Random forest (mean decrease in accuracy)  
+### 5.1.2 Random forest (mean decrease in accuracy)  
 Note - this depends on whether we're using regression or classification. A generic variable importance plot is shown for one iteration of the model.
 
 ```{r randomForest, cache = TRUE}
@@ -550,6 +548,7 @@ Resources for learning more about various topics.
 ## 8.2 R  
 [R for Data Science](https://r4ds.had.co.nz/)  
 [RMarkdown tutorial](https://rmarkdown.rstudio.com/lesson-1.html)  
+[R Markdown: The Definitive Guide](https://bookdown.org/yihui/rmarkdown/)  
 [tidyverse](https://www.tidyverse.org/packages/)  
 [Ggplot2](https://ggplot2.tidyverse.org/)  
     - Includes several reference guides and learning sources  
@@ -562,35 +561,3 @@ Functions for assisting in 16S microbiome analysis
 
 ## 8.5 other  
 [Bioconductor](https://www.bioconductor.org/)  
-
-```{r analyze_ae, include = FALSE}
-# III. Analysis of Controls
-# [Descriptive text here]
-
-# 8 samples - perhaps ideal for use as an example of a control RA plot
-# don't include geometric mean
-# ae_df <- filter(otu_df, Specimen_ctrl == "AE")
-# 
-# # determine order of OTUs based on mean within selected specimens
-# otu_order <- names(sort(colMeans(ae_df[, stringr::str_detect(colnames(ae_df), "Otu")]), decreasing = TRUE))
-# 
-# # create mean sample
-# sample_names <- ae_df$Sample_name
-# temp <- dplyr::select(ae_df, otu_order[1:20])
-# temp <- rbind(temp, apply(dplyr::select(ae_df, otu_order[1:20]), 2, mean))
-# sample_names <- append(sample_names, "Arith_Mean")
-# ae_df <- cbind(Sample_name = forcats::fct_inorder(sample_names), temp)
-# ae_gg <- tidyr::gather(ae_df, key = OTU, value = Percentage, -stringr::str_which(colnames(ae_df), "Otu", negate = TRUE), factor_key = TRUE)
-# levels(ae_gg$OTU) <- forcats::fct_inorder(paste0(otu_good_taxonomy[levels(ae_gg$OTU), ]$Genus, " (", levels(ae_gg$OTU), ")"))
-```
-
-```{r plot_ae, fig.width = 12, fig.height = 12, include = FALSE}
-# Encourage participants to run these by commenting out a layer, altering 1 parameter to develop a deeper understanding of how to build up a ggplot object
-
-# ggplot(data = ae_gg, aes(x = OTU, y = Percentage, fill = Sample_name)) + 
-#   geom_col() + 
-#   facet_grid(Sample_name ~ .) +
-#   theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5), legend.position = "top") +
-#   scale_y_continuous(labels = scales::dollar_format(suffix = "%", prefix = "")) +
-#   labs(title = "Cross-Comparison of AE Control Replicates", x = "OTU", y = "% Relative Abundance")
-```
