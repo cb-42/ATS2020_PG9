@@ -6,6 +6,8 @@ output: github_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+![ATS2020](images/ats2020.png)
+
 # ATS2020_PG9
 This is a guide for acquiring the course materials for ATS 2020 PG9: A HANDS-ON INTRODUCTION TO STUDYING THE LUNG MICROBIOME
 
