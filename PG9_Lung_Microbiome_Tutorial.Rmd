@@ -83,7 +83,7 @@ rownames(otu_good) <- str_remove(rownames(otu_good), "_S\\d+")
 
 # It's a good idea to inspect the data regularly with tools such as dim(), str(), head(), tail(), summary()... This will help in catching errors earlier
 dim(otu_good) # dim(otu_good)[1] observations (samples) x dim(otu_good)[2] features (OTUs above .1% population threshold)
-otu_good[1:20, 1:20] # use other means of showing a glimpse of the data?
+otu_good[1:20, 1:10] # use other means of showing a glimpse of the data?
 
 
 # II. Read in cons.taxonomy (for each OTU: taxonomic levels down to Genus, if possible)
@@ -235,6 +235,56 @@ legend("topright", levels(otu_lung$vendor), pch = 19, col = pcapal, title = "Ven
 legend("bottomright", legend = "Permanova: Difference between Specimen Origin: 9.999e-05") # Should signifiance test be include in the plot?
 ```
 
+[PCA Comparison of negative controls vs lung tissue]  
+[Descriptive text here]  
+
+```{r pca_con_lung}
+# Filter data to retain controls and lung tissue only
+ra_df <- otu_df %>% # Note at this is just one of several possible approaches to filtering to retain the correct rows
+  filter((reagent_tissue == "Control") | (tissue_type == "Lung")) %>% # 65 specimens
+  droplevels() # remove factor levels with no remaining observations - saves potential headaches in downstream wrangling and visualizations
+rownames(ra_df) <- ra_df$specimen
+
+# PCA of all negative controls + lung tissue
+otu_con_lung_hel <- decostand(dplyr::select(ra_df, contains("Otu")), "hellinger") # use OTU columns only
+otu_con_lung_pca <- rda(otu_con_lung_hel)
+
+# summary() produces a list which is rather messy to print out all at once. Let's just examine the importance of the principal components
+summary(otu_con_lung_pca)$cont # 0.1782 0.08601 0.06845 proportion explained by first 3 axes
+
+# Permanova
+set.seed(8947) # setting a seed allows for reproducibility - both lines need to be run together
+adonis(otu_con_lung_hel~ra_df$vendor, method="euclidean", permutations = 10000) # 9.999e-05 ***
+```
+
+```{r spider_con_lung, fig.height=10, fig.width=10}
+# This approach combines base R plotting functionality and vegan's ordispider function, which creates the lines connecting points to the centroids.
+plot(otu_con_lung_pca, type = "n", font = 2, font.lab = 2, xlab = "PC1 (17.82% Explained)", ylab = "PC2 (8.60% Explained)", main = "PCA of Specimen Type, colored by Type", display = "sites")
+points(otu_con_lung_pca, pch = 19, col = pcapal[as.numeric(ra_df$reagent_tissue)])
+ordispider(otu_con_lung_pca, ra_df$reagent_tissue, label = TRUE)
+legend("topright", levels(ra_df$reagent_tissue), pch = 19, col = pcapal, title = "Type")
+legend("topleft", legend = "Permanova: Difference between Specimen Type: 9.999e-05") # Should signifiance test be include in the plot?
+```
+
+[biplot descriptive text]
+
+```{r biplot, fig.height=10, fig.width=10, warning=F}
+# Consider whether rownames should be shown, if so they may need to be truncated for visibility
+
+# biplot(otu_con_lung_pca, type = "t") # This will result in a lot of warnings, and though it generates the plot it's not recommended
+
+# Address warnings with the following function, (hides warnings from 0-length arrows)
+# Alternatively, set warning = F in the code chunk
+quiet_biplot <- quietly(function(ordiobj, ...) {
+  biplot(ordiobj, ...)
+})
+
+biplot_results <- quiet_biplot(otu_con_lung_pca, type = "t")
+
+# example for replacing specimen labels with C or T
+biplot(prcomp(otu_con_lung_hel), xlabs=ifelse(str_detect(ra_df$reagent_tissue, "Control"), "C", "T")) # arrow.len = 0 will also remove warnings, at the cost of losing the arrowhead
+```
+
 ### 4.1.2 Trees and heat maps  
 
 [Descriptive text here]  
@@ -285,7 +335,7 @@ In the following series of examples, we'll use RA plots to compare the community
 
 ```{r prep_ra}
 # First we need to prepare the data: controls in one group, lung tissue in another
-# Order the data by most abundance OTU in lung tissue
+# Order the data by most abundant OTU in lung tissue specimens
 # Include an errorbar
 # Color by phyla
 
@@ -385,6 +435,59 @@ ggplot(agg_df, aes(x = OTU, y = Mean_perc, fill = Phylum)) +
 
 # Encourage participants to run these by commenting out a layer, altering 1 parameter to develop a deeper understanding of how to build up or alter a ggplot object
 ```
+
+[RA within Lung Tissue only]  
+[Descriptive Text here]  
+
+```{r ra_lung_prep}
+# First we need to prepare the data: lung tissue
+# Order the data by most abundant OTUs within Charles River vendor
+# Include an errorbar
+# Color by phyla
+# Add Genus identifier to the OTU number where possible
+
+ra_df <- otu_df %>% # Note at this is just one of several possible approaches to filtering to retain the correct rows
+  filter(tissue_type == "Lung") %>% # 65 specimens
+  droplevels() # remove factor levels with no remaining observations - saves potential headaches in downstream wrangling and visualizations
+
+# Determine the order of OTUs based on means within Lung specimens
+otu_order <- names(sort(colMeans(filter(ra_df, vendor == "Charles_River")[, str_detect(colnames(ra_df), "Otu")]), decreasing = TRUE))
+
+# Keep top 20 OTUs, then reshape the dataframe from wide to long format
+g_df <- ra_df %>%
+  select(str_which(colnames(ra_df), "Otu", negate = TRUE), colnames(ra_df[, otu_order[1:20]])) %>% # Keep non-OTU columns, followed by the 20 most abundant OTU columns
+  gather(key = OTU, value = Percentage, -str_which(colnames(ra_df), "Otu", negate = TRUE), factor_key = TRUE) # factor_key is important because we care about the order (clevels) in OTU
+  
+# Join Phylum column from taxonomy table
+tax_df <- otu_good_taxonomy[otu_good_taxonomy[,"OTU"] %in% otu_order[1:20], c("OTU", "Phylum")] # Keep only the rows from ranked OTU vector, and OTU + whatever taxonomic level to use for filling bars
+tax_df$OTU <- factor(tax_df$OTU, levels = otu_order[1:20]) # set OTU factor levels to be in the same order as in g_df. If this is not done, our OTU column will be coerced to a character vector when we join (we'll lose the levels)
+g_df <- inner_join(g_df, tax_df, by = "OTU")
+
+# dimensions have gone from 65 745 to 1300 17
+
+# Generate mean and sem for each group
+agg_df <- g_df %>%
+  group_by(vendor, OTU, Phylum) %>%
+  summarize(Mean_perc = mean(Percentage), SEM = sqrt(var(Percentage)/length(Percentage))) %>%
+  ungroup()
+
+# Add Genus levels to the OTU Number
+levels(agg_df$OTU) <- fct_inorder(paste0(otu_good_taxonomy[levels(agg_df$OTU), ]$Genus, " (", levels(agg_df$OTU), ")"))
+```
+
+
+```{r ra_lung, fig.height=8, fig.width=12}
+# This time, we'll create the final RA plot in one pass
+ggplot(agg_df, aes(x = OTU, y = Mean_perc, fill = Phylum)) + 
+  geom_col() + # use show.legend = FALSE to remove the legend entirely
+  facet_grid(vendor ~ .) +
+  geom_errorbar(aes(ymin = Mean_perc - SEM, ymax = Mean_perc + SEM, width = 0.3)) + 
+  theme_bw() +
+  theme(panel.grid = element_blank(), axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "top", plot.margin = unit(c(0.5,0.5,0.5,1),"cm"), legend.title = element_blank()) + 
+  scale_y_continuous(labels = unit_format(suffix = "%")) + 
+  labs(title="Comparison of Lung Tissue across vendors", subtitle = "Ranked by Charles River lung tissue specimens", y = "% Relative Abundance")
+```
+
 
 ## 4.2 Hypothesis testing  
 
