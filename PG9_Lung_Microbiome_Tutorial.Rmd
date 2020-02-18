@@ -228,7 +228,7 @@ As a first step, we need to create a PCA model using only the data needed to mak
 con_lung_df <- otu_df %>% # Note: this is just one of several possible approaches to filtering to retain the correct rows.
   filter((reagent_tissue == "Control") | (tissue_type == "Lung")) %>% # 65 specimens
   droplevels() # Remove factor levels with no remaining observations. This prevents potential headaches in downstream data wrangling and visualizations.
-rownames(con_lung_df) <- ra_df$specimen 
+rownames(con_lung_df) <- con_lung_df$specimen 
 
 # PCA of all negative controls + lung tissue
 # Keep only the rows of interest for unstandardized data.
@@ -376,12 +376,14 @@ clust_lung_otu <- hclust(bc_lung_otu, method = "average")
 heatmap(as.matrix(select(heat_df, str_which(colnames(heat_df), "Otu"))), Rowv = as.dendrogram(clust_lung_spec), Colv = as.dendrogram(clust_lung_otu), margins=c(5,0))
 ```
 
-### 4.1.3 Rank abundance  
+### 4.1.3 Rank Abundance  
 In the following series of examples, we'll use RA plots to compare the community composition in lung speciments against negative controls. Note that the strategies we'll use can be extended to conduct comparisons across any arbitrary groups, assuming metadata exists to identify the observations (rows) belonging to each group. For instance, we might compare four different types of tissue, or drill down into the controls and compare those subtypes.  
 
+#### 4.1.3.a Comparison of Negative Controls against Lung Tisssue specimens  
+
 ```{r prep_ra}
-# First we need to prepare the data: controls in one group, lung tissue in another
-# Order the data by most abundant OTU in lung tissue specimens
+# First we need to prepare the data: negative controls and lung tissue specimens
+# Order the data by most abundant OTU in lung tissue specimens only
 # Include an errorbar
 # Color by phyla
 
@@ -395,14 +397,14 @@ otu_order <- names(sort(colMeans(filter(ra_df, tissue_type == "Lung")[, str_dete
 # Keep top 20 OTUs, then reshape the dataframe from wide to long format
 g_df <- ra_df %>%
   select(str_which(colnames(ra_df), "Otu", negate = TRUE), colnames(ra_df[, otu_order[1:20]])) %>% # Keep non-OTU columns, followed by the 20 most abundant OTU columns
-  gather(key = OTU, value = Percentage, -str_which(colnames(ra_df), "Otu", negate = TRUE), factor_key = TRUE) # factor_key is important because we care about the order (clevels) in OTU
+  gather(key = OTU, value = Percentage, -str_which(colnames(ra_df), "Otu", negate = TRUE), factor_key = TRUE) # factor_key is important because we care about the order (levels) in OTU
   
 # Join Phylum column from taxonomy table
 tax_df <- otu_good_taxonomy[otu_good_taxonomy[,"OTU"] %in% otu_order[1:20], c("OTU", "Phylum")] # Keep only the rows from ranked OTU vector, and OTU + whatever taxonomic level to use for filling bars
 tax_df$OTU <- factor(tax_df$OTU, levels = otu_order[1:20]) # set OTU factor levels to be in the same order as in g_df. If this is not done, our OTU column will be coerced to a character vector when we join (we'll lose the levels)
 g_df <- inner_join(g_df, tax_df, by = "OTU")
 
-# dimensions have gone from 65 745 to 1300 17
+# dimensions have gone from 65 745 to 1300 18
 
 # Generate mean and sem for each group
 agg_df <- g_df %>%
@@ -411,10 +413,12 @@ agg_df <- g_df %>%
   ungroup()
 ```
 
+First we'll create a basic rank abundance plot, then it will be gradually built up in the following examples.  
+
 ```{r plot_ra_basic, fig.height=6, fig.width=12}
-(p <- ggplot(agg_df, aes(x = OTU, y = Mean_perc, fill = reagent_tissue)) + 
+(p <- ggplot(agg_df, aes(x = OTU, y = Mean_perc, fill = reagent_tissue)) + # Utilize the data and map the variables to plot parameters.
   geom_col() +
-  facet_grid(reagent_tissue ~ .))
+  facet_grid(reagent_tissue ~ .)) # Faceting replicates the plot once for each category contained within specified variable(s).
 ```
 
 Let's add an errorbar and improve the visual aesthetics.
@@ -430,11 +434,10 @@ Let's add an errorbar and improve the visual aesthetics.
 
 Adding Genus labels to Otu identifiers
 
-```{r otu_lab, fig.height=6, fig.width=12}
+```{r plot_ra_otu_lab, fig.height=6, fig.width=12}
 # Add Genus levels to the OTU Number
 levels(agg_df$OTU) <- fct_inorder(paste0(otu_good_taxonomy[levels(agg_df$OTU), ]$Genus, " (", levels(agg_df$OTU), ")"))
-# equivalent to:
-# cbmbtools::paste_tax(levels(agg_df$OTU))
+# equivalent to: # cbmbtools::paste_tax(levels(agg_df$OTU))
 
 ggplot(agg_df, aes(x = OTU, y = Mean_perc, fill = fct_rev(reagent_tissue))) + 
   geom_col() +
@@ -448,7 +451,7 @@ ggplot(agg_df, aes(x = OTU, y = Mean_perc, fill = fct_rev(reagent_tissue))) +
 
 How do we adjust the legend and facet labels?
 
-```{r ra_factor, fig.height=6, fig.width=12}
+```{r plot_ra_factor, fig.height=6, fig.width=12}
 # Although it is possible to adjust the values and labels within the ggplot workflow, perhaps the simplest approach would be to correct the reagent_tissue column values and factor levels prior to plotting
 agg_df$reagent_tissue <- fct_recode(agg_df$reagent_tissue, Lung = "Tissue") %>%
   fct_relevel("Lung")
@@ -466,7 +469,7 @@ ggplot(agg_df, aes(x = OTU, y = Mean_perc, fill = reagent_tissue)) +
 
 How can we use fill color to show the phyla to which each OTU belongs?
 
-```{r ra_phy_prep, fig.height=6, fig.width=12}
+```{r plot_ra_phy, fig.height=6, fig.width=12}
 # First we need to prepare the taxonomic data - In this case we did this earlier in our overall RA data prep.
 
 # Next, simply change the fill parameter to Phylum and rerun the ggplot code
@@ -482,10 +485,10 @@ ggplot(agg_df, aes(x = OTU, y = Mean_perc, fill = Phylum)) +
 # Encourage participants to run these by commenting out a layer, altering 1 parameter to develop a deeper understanding of how to build up or alter a ggplot object
 ```
 
-[RA within Lung Tissue only]  
+#### 4.1.3.b Comparison of Lung Tisssue specimens by vendor  
 [Descriptive Text here]  
 
-```{r ra_lung_prep}
+```{r prep_ra_lung}
 # First we need to prepare the data: lung tissue
 # Order the data by most abundant OTUs within Charles River vendor
 # Include an errorbar
@@ -493,10 +496,10 @@ ggplot(agg_df, aes(x = OTU, y = Mean_perc, fill = Phylum)) +
 # Add Genus identifier to the OTU number where possible
 
 ra_df <- otu_df %>% # Note at this is just one of several possible approaches to filtering to retain the correct rows
-  filter(tissue_type == "Lung") %>% # 65 specimens
+  filter(tissue_type == "Lung") %>% # 40 specimens
   droplevels() # remove factor levels with no remaining observations - saves potential headaches in downstream wrangling and visualizations
 
-# Determine the order of OTUs based on means within Lung specimens
+# Determine the order of OTUs based on means within Lung specimens from Charles River
 otu_order <- names(sort(colMeans(filter(ra_df, vendor == "Charles_River")[, str_detect(colnames(ra_df), "Otu")]), decreasing = TRUE))
 
 # Keep top 20 OTUs, then reshape the dataframe from wide to long format
@@ -509,7 +512,7 @@ tax_df <- otu_good_taxonomy[otu_good_taxonomy[,"OTU"] %in% otu_order[1:20], c("O
 tax_df$OTU <- factor(tax_df$OTU, levels = otu_order[1:20]) # set OTU factor levels to be in the same order as in g_df. If this is not done, our OTU column will be coerced to a character vector when we join (we'll lose the levels)
 g_df <- inner_join(g_df, tax_df, by = "OTU")
 
-# dimensions have gone from 65 745 to 1300 17
+# dimensions have gone from 40 745 to 1300 18
 
 # Generate mean and sem for each group
 agg_df <- g_df %>%
@@ -521,8 +524,9 @@ agg_df <- g_df %>%
 levels(agg_df$OTU) <- fct_inorder(paste0(otu_good_taxonomy[levels(agg_df$OTU), ]$Genus, " (", levels(agg_df$OTU), ")"))
 ```
 
-```{r ra_lung, fig.height=8, fig.width=12}
-# This time, we'll create the final RA plot in one pass
+This time, we'll create the final RA plot in one pass.  
+
+```{r plot_ra_lung, fig.height=8, fig.width=12}
 ggplot(agg_df, aes(x = OTU, y = Mean_perc, fill = Phylum)) + 
   geom_col() + # use show.legend = FALSE to remove the legend entirely
   facet_grid(vendor ~ .) +
@@ -573,14 +577,14 @@ otu_mva_results$table # Signif
 ```
 
 ### 4.2.3 constrained ordination  
-Cage example using vegan. [descriptive text here]
+Cage example using `vegan::cca()`. [Descriptive text here]  
 
 ```{r constrained}
 # Run anova on our hellinger transformed data. We'll also need to pass in one or more vectors of metadata corresponding to the constraining variables.
 lung_meta <- dplyr::filter(otu_df, specimen %in% rownames(otu_lung)) %>%
   dplyr::select(-str_which(colnames(otu_df), "Otu"))
-cage_cca <- cca(otu_lung_hel ~ lung_meta$cage)
-anova(cage_cca)
+cage_cca <- cca(otu_lung_hel ~ lung_meta$cage) # First create the cca model object
+anova(cage_cca) # Analyze the model
 ```
 
 # V. Relative Abundance of Key Community Members  
