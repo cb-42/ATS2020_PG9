@@ -37,7 +37,7 @@ R Markdown documents consist of narrative of text such as this sentence and code
 paste("Welcome to ATS 2020, PG9", "-", "A Hands-On Introduction to Studying the Lung Microbiome")
 ```
 
-## 1.4 Notes on R code syntax, best practices  
+## 1.4 Brief notes on R code syntax, best practices  
   - Include comments explaining what your code does. The primary beneficiary will likely be your future self!  
   - Give your objects meaningful, formulaic names. This is not always easy when you create dozens or hundreds of variables.  
   - package_name::function_name()  
@@ -50,7 +50,7 @@ We will be using 16S data resulting from mothur processing and metadata that was
 ## 2.1 Library Load  
 Before we begin bringing in the data to begin our analysis, we need to load the libraries that we'll use. Libraries contain additional code (primarily in the form of functions) and/or data that extend R's base functionality. A good practice is to keep a code chunk near the top of your script that contains all the libraries that are utilized in the analysis, so it's easy to keep track of all of the dependencies that your code has.
 
-```{r libraries, message = FALSE}
+```{r libraries, message=FALSE}
 # This section contains typical libraries used in these analyses
 
 # I. universal data wrangling and visualization
@@ -67,52 +67,58 @@ library(RColorBrewer)   # brewer.pal() for generating custom palettes
 library(knitr)          # kable(), for displaying nicer tables in html/pdf output
 ```
 
+## 2.2 16S Data  
+Next we'll bring in the 16S data from two mothur files which have the raw counts and taxonomy information.  
+
 ```{r load_16S_rawdata}
 # For ease of use, place the processed 16S data files of interest into the same directory as your current RStudio project
-# Best practices: keep a separate project for each experiment or combination of experiments
-# include a data folder within the project's directory to keep source files organized; also somewhat mitigates the risk of modifying them inadvertently
+# Best practices: 1) keep a separate project for each experiment or combination of experiments
+# 2) include a data folder within the project's directory to keep source files organized; also somewhat mitigates the risk of modifying them inadvertently
 
 # I. Read in .shared (counts of sequences assigned to OTU #s)
 # Includes basic processing with selection of OTUs > 0.1 % of the population
-otu_raw <- read.table("data/Heterogeneity.shared.txt", row.names = 2, header = TRUE)
-otu_trim <- otu_raw[, -c(1:2)]
+otu_raw <- read.table("data/Heterogeneity.shared.txt", row.names = 2, header = TRUE) # read in the data, treating the first row as column names
+otu_trim <- otu_raw[, -c(1:2)] # drop the first 2 columns
 otu_trim <- as.matrix(otu_trim)
-otu_tmp <- vegan::decostand(otu_trim, "total") * 100
-otu_trim[which(otu_tmp < 0.1)] <- 0
-otu_good <- otu_trim[, which(colSums(otu_trim) > 0)]
+otu_tmp <- vegan::decostand(otu_trim, "total") * 100 # standardization
+otu_trim[which(otu_tmp < 0.1)] <- 0 
+otu_good <- otu_trim[, which(colSums(otu_trim) > 0)] # keep only the OTUs which were present after setting quantities under 0.1 to 0
 
 # Trim _S from end of rownames(otu_good); note that it may be useful to keep these well identifiers in some analyses
 rownames(otu_good) <- str_remove(rownames(otu_good), "_S\\d+")
 
 # It's a good idea to inspect the data regularly with tools such as dim(), str(), head(), tail(), summary()... This will help in catching errors earlier
 dim(otu_good) # dim(otu_good)[1] observations (samples) x dim(otu_good)[2] features (OTUs above .1% population threshold)
-otu_good[1:20, 1:10] # Examine first 20 rows, 10 columns. Use other means of showing a glimpse of the data?
+otu_good[1:20, 1:10] # Examine first 20 rows, 10 columns. Try using other means for getting a glimpse of the data, such as str(otu_good).
 
 
-# II. Read in cons.taxonomy (for each OTU: taxonomic levels down to Genus, if possible)
+# II. Read in cons.taxonomy (for each OTU: contains taxonomic identifiers down to Genus level, if possible)
 # Note that OTUs are in rows here rather than columns
 # 2 imports are required due to the combination of 2 different separators  
 tax1 <- read.table("data/Heterogeneity.0.03.cons.taxonomy.txt", sep = "\t", row.names = 1, header = TRUE, colClasses = c("character", "numeric", "character"))
 tax2 <- read.table("data/Heterogeneity.0.03.cons.taxonomy.txt", sep = ";", skip = 1, col.names = c("", "Phylum", "Class", "Order", "Family", "Genus", "")) %>% 
-  dplyr::select(-c(1, 7)) %>% 
-  purrr::map_df(stringr::str_replace, "\\(.*.\\)", "") %>%
-  purrr::map_df(as.factor)
-otu_taxonomy <- data.frame(OTU = rownames(tax1), Size = tax1[, 1], tax2, stringsAsFactors = FALSE)
+  dplyr::select(-c(1, 7)) %>% # drop columns 1 and 7
+  purrr::map_df(stringr::str_replace, "\\(.*.\\)", "") %>% # this essentially trims (100) and the like
+  purrr::map_df(as.factor) # turns all present columns into factor type variables
+otu_taxonomy <- data.frame(OTU = rownames(tax1), Size = tax1[, 1], tax2, stringsAsFactors = FALSE) # combine the first and second import
 rownames(otu_taxonomy) <- rownames(tax1)
 
 # trim otu_taxonomy based on OTUs in otu_good
 otu_good_taxonomy <- otu_taxonomy[otu_taxonomy$OTU %in% colnames(otu_good), ]
 rownames(otu_good_taxonomy) <- intersect(rownames(otu_taxonomy), colnames(otu_good))
-otu_good_taxonomy <- as.data.frame(otu_good_taxonomy)
+# otu_good_taxonomy <- as.data.frame(otu_good_taxonomy)   redundant in this case
 
 dim(otu_good_taxonomy)
 otu_good_taxonomy[1:10,] # Examine the first 10 rows. These 10 OTUs coincide with the glimpse we took of otu_good.
 ```
 
-```{r metadata_wrangling, include = FALSE}
-# Load in metadata/environmental data, or create it
+## 2.3 Metadata  
+In order to aid in dividing our samples into groupings, we'll also need metadata or environmental data. Here we illustrate how that can be done.  
 
-## Load approach using metadat from github repo
+```{r metadata_wrangling}
+# In this section, we'll load in metadata/environmental data, and/or create it
+
+## Load approach using metadata from github repo
 meta_df <- read.table("data/Heterogeneity.metadata.txt", sep = "\t", header = TRUE) 
 # Note that this will create factors out of all chr type columns
 #While - undesirable for 'specimen' but useful for 'reagent_tissue', 'litter', 'vendor', 'mouse', 'tissue_type', and 'cage'
@@ -156,9 +162,10 @@ otu_df$specimen <- as.character(otu_df$specimen) # let's convert 'specimen' back
 # otu_df$Organ %>% summary() %>% sum() # ditto; 32 NAs for organs
 ```
 
-We'll also go ahead and create a custom palette for use in some of our visualizations. Although we might not realize we need this until later in the analysis, it makes sense to include elements like this in the preparation part of your analysis. Apart from the organizational benefit, code that relies on the palette won't run if the palette hasn't been defined - so it is best to define the palette before creating any visualizations.  
+## 2.4 Palette Preparation  
+We'll also create a custom palette for use in some of our visualizations. Although we might not realize we need this until later in the analysis, it makes sense to include elements like this in the preparation part of your analysis. Apart from the organizational benefit, code that relies on the palette won't run if the palette hasn't been defined - so it is best to define the palette before creating any visualizations.  
 
-```{r pal_prep, fig.width=8}
+```{r pal_prep}
 # for PCA ordinations; choose an 9 that covers the maximum number of factor levels (conditions) within a variable of interest
 pcapal <- brewer.pal(9,"Set1")
 ```
