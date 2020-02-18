@@ -171,7 +171,6 @@ pcapal <- brewer.pal(9,"Set1")
 ```
 
 # III. Absolute Abundance  
-
 [Descriptive text here]  
 
 ## 3.1  ddPCR  
@@ -213,81 +212,58 @@ ggplot(avg_abs_df, aes(x = Type, y = mean_DNA_copies, fill = Type)) + # This bri
   annotation_logticks(sides = "l") # Control whether/where logticks appear
 ```
 
-# IV. Comparing Community Composition
+# IV. Comparing Community Composition  
 
-## 4.1 Visualization techniques
+## 4.1 Visualization techniques  
+We will explore PCA ordinations, biplots, rank abundance plots (bar charts), heat maps, 
 
 ### 4.1.1 PCA Ordination  
+As a first step, we need to create a PCA model using only the data needed to make our comparison of interest.  
 
+#### 4.1.1.a Lung Tissue vs Negative Controls  
 [Descriptive text here]  
 
-```{r pca_prep}
-# Filter data to retain lung tissue only
-otu_lung <- dplyr::filter(otu_df, tissue_type == "Lung") %>%
-  droplevels() # remove levels that are no longer present due to filtering
-rownames(otu_lung) <- otu_lung$specimen
-
-# PCA of all data (non-control)
-otu_lung_hel <- decostand(dplyr::select(otu_lung, contains("Otu")), "hellinger") # use OTU columns only
-otu_lung_pca <- rda(otu_lung_hel)
-
-# summary() produces a list which is rather messy to print out all at once. Let's just examine the importance of the principal components
-summary(otu_lung_pca)$cont # 0.1458 0.10677 0.06776 proportion explained by first 3 axes
-
-# Permanova
-set.seed(8947) # setting a seed allows for reproducibility - both lines need to be run together
-adonis(otu_lung_hel~otu_lung$vendor, method="euclidean", permutations = 10000) # 9.999e-05 ***
-```
-
-```{r spider_pca, fig.height=10, fig.width=10}
-# This approach combines base R plotting functionality and vegan's ordispider function, which creates the lines connecting points to the centroids.
-plot(otu_lung_pca, type = "n", font = 2, font.lab = 2, xlab = "PC1 (14.58% Explained)", ylab = "PC2 (10.68% Explained)", main = "PCA of Specimen Origin, colored by Vendor", display = "sites")
-points(otu_lung_pca, pch = 19, col = pcapal[as.numeric(otu_lung$vendor)])
-ordispider(otu_lung_pca, otu_lung$vendor, label = TRUE)
-legend("topright", levels(otu_lung$vendor), pch = 19, col = pcapal, title = "Vendor")
-legend("bottomright", legend = "Permanova: Difference between Specimen Origin: 9.999e-05") # Should signifiance test be include in the plot?
-```
-
-[PCA Comparison of negative controls vs lung tissue]  
-[Descriptive text here]  
-
-```{r pca_con_lung}
+```{r prep_pca_con_lung}
 # Filter data to retain controls and lung tissue only
-ra_df <- otu_df %>% # Note at this is just one of several possible approaches to filtering to retain the correct rows
+con_lung_df <- otu_df %>% # Note: this is just one of several possible approaches to filtering to retain the correct rows.
   filter((reagent_tissue == "Control") | (tissue_type == "Lung")) %>% # 65 specimens
-  droplevels() # remove factor levels with no remaining observations - saves potential headaches in downstream wrangling and visualizations
-rownames(ra_df) <- ra_df$specimen
+  droplevels() # Remove factor levels with no remaining observations. This prevents potential headaches in downstream data wrangling and visualizations.
+rownames(con_lung_df) <- ra_df$specimen 
 
 # PCA of all negative controls + lung tissue
-otu_con_lung_hel <- decostand(dplyr::select(ra_df, contains("Otu")), "hellinger") # use OTU columns only
+# Keep only the rows of interest for unstandardized data.
+pca_df <- otu_good[con_lung_df$specimen, ]
+otu_con_lung_hel <- decostand(pca_df, "hellinger") # Standardize use OTU columns only
 otu_con_lung_pca <- rda(otu_con_lung_hel)
 
-# summary() produces a list which is rather messy to print out all at once. Let's just examine the importance of the principal components
+# summary() produces a list which is rather messy to print out all at once. Let's just examine the importance of the principal components by accessing $cont
 summary(otu_con_lung_pca)$cont # 0.1782 0.08601 0.06845 proportion explained by first 3 axes
 
 # Permanova
-set.seed(8947) # setting a seed allows for reproducibility - both lines need to be run together
-adonis(otu_con_lung_hel~ra_df$vendor, method="euclidean", permutations = 10000) # 9.999e-05 ***
+set.seed(8947) # Setting a seed allows for reproducibility. Both of these lines need to be run together for it to work.
+adonis(otu_con_lung_hel~con_lung_df$vendor, method="euclidean", permutations = 10000) # 9.999e-05 ***
 ```
 
 ```{r spider_con_lung, fig.height=10, fig.width=10}
 # This approach combines base R plotting functionality and vegan's ordispider function, which creates the lines connecting points to the centroids.
-plot(otu_con_lung_pca, type = "n", font = 2, font.lab = 2, xlab = "PC1 (17.82% Explained)", ylab = "PC2 (8.60% Explained)", main = "PCA of Specimen Type, colored by Type", display = "sites")
-points(otu_con_lung_pca, pch = 19, col = pcapal[as.numeric(ra_df$reagent_tissue)])
-ordispider(otu_con_lung_pca, ra_df$reagent_tissue, label = TRUE)
-legend("topright", levels(ra_df$reagent_tissue), pch = 19, col = pcapal, title = "Type")
-legend("topleft", legend = "Permanova: Difference between Specimen Type: 9.999e-05") # Should signifiance test be include in the plot?
+# Unlike with ggplot(), these lines must all be run at once in order to produce the desired result.
+plot(otu_con_lung_pca, type = "n", font = 2, font.lab = 2, xlab = "PC1 (17.82% Explained)", ylab = "PC2 (8.60% Explained)", main = "PCA of Lung Tissue vs Controls, colored by Type", display = "sites")
+points(otu_con_lung_pca, pch = 19, col = pcapal[as.numeric(con_lung_df$reagent_tissue)]) # pch determines the point shape and col determines the colors to be used.
+ordispider(otu_con_lung_pca, con_lung_df$reagent_tissue, label = TRUE) # Draw lines from centroids to the points belonging to each group. 
+legend("topright", levels(con_lung_df$reagent_tissue), pch = 19, col = pcapal, title = "Type") # Format and add details to legends
+legend("topleft", legend = "Permanova: Difference between Lung Specimens and Controls: 9.999e-05") # Should signifiance test be include in the plot?
 ```
 
-[biplot descriptive text]
+#### 4.1.1.b Biplot  
+[biplot descriptive text]  
 
-```{r biplot, fig.height=10, fig.width=10, warning=F}
+```{r biplot_con_lung, fig.height=10, fig.width=10}
 # Consider whether rownames should be shown, if so they may need to be truncated for visibility
 
 # biplot(otu_con_lung_pca, type = "t") # This will result in a lot of warnings, and though it generates the plot it's not recommended
 
 # Address warnings with the following function, (hides warnings from 0-length arrows)
-# Alternatively, set warning = F in the code chunk
+# Alternatively, set warning = FALSE in the code chunk; does not seem to work on macs
 quiet_biplot <- quietly(function(ordiobj, ...) {
   biplot(ordiobj, ...)
 })
@@ -295,20 +271,73 @@ quiet_biplot <- quietly(function(ordiobj, ...) {
 biplot_results <- quiet_biplot(otu_con_lung_pca, type = "t")
 
 # example for replacing specimen labels with C or T
-biplot(prcomp(otu_con_lung_hel), xlabs=ifelse(str_detect(ra_df$reagent_tissue, "Control"), "C", "T")) # arrow.len = 0 will also remove warnings, at the cost of losing the arrowhead
+#  biplot(prcomp(otu_con_lung_hel), xlabs=ifelse(str_detect(con_lung_df$reagent_tissue, "Control"), "C", "T")) # arrow.len = 0 will also remove warnings, at the cost of losing the arrowhead
+```
+
+#### 4.1.1.c Lung Tissue: Charles River vs Jackson Labs  
+[Descriptive text here]  
+
+```{r prep_pca_lung}
+# Filter data to retain lung tissue only
+otu_lung <- dplyr::filter(otu_df, tissue_type == "Lung") %>%
+  droplevels() # remove levels that are no longer present due to filtering
+rownames(otu_lung) <- otu_lung$specimen
+
+# PCA of lung tissue specimens
+# Keep only the rows of interest for unstandardized data.
+pca_df <- otu_good[otu_lung$specimen, ]
+otu_lung_hel <- decostand(pca_df, "hellinger") # Standardize use OTU columns only
+otu_lung_pca <- rda(otu_lung_hel)
+
+# summary() produces a list which is rather messy to print out all at once. Let's just examine the importance of the principal components by accessing $cont
+summary(otu_lung_pca)$cont # 0.1458 0.10677 0.06776 proportion explained by first 3 axes
+
+# Permanova
+set.seed(8947) # Setting a seed allows for reproducibility. Both of these lines need to be run together for it to work.
+adonis(otu_lung_hel~otu_lung$vendor, method="euclidean", permutations = 10000) # 9.999e-05 ***
+```
+
+```{r spider_lung, fig.height=10, fig.width=10}
+# This approach combines base R plotting functionality and vegan's ordispider function, which creates the lines connecting points to the centroids.
+# Unlike with ggplot(), these lines must all be run at once in order to produce the desired result.
+plot(otu_lung_pca, type = "n", font = 2, font.lab = 2, xlab = "PC1 (14.58% Explained)", ylab = "PC2 (10.68% Explained)", main = "PCA of Specimen Origin, colored by Vendor", display = "sites")
+points(otu_lung_pca, pch = 19, col = pcapal[as.numeric(otu_lung$vendor)]) # pch determines the point shape and col determines the colors to be used.
+ordispider(otu_lung_pca, otu_lung$vendor, label = TRUE) # Draw lines from centroids to the points belonging to each group.
+legend("topright", levels(otu_lung$vendor), pch = 19, col = pcapal, title = "Vendor") # Format and add details to legends
+legend("bottomright", legend = "Permanova: Difference between Specimen Origin: 9.999e-05") # Should signifiance test be include in the plot?
+```
+
+#### 4.1.1.d Biplot  
+[biplot descriptive text]  
+
+```{r biplot_lung, fig.height=10, fig.width=10}
+# Consider whether rownames should be shown, if so they may need to be truncated for visibility
+
+# biplot(otu_lung_pca, type = "t") # This will result in a lot of warnings, and though it generates the plot it's not recommended
+
+# Address warnings with the following function, (hides warnings from 0-length arrows)
+# Alternatively, set warning = FALSE in the code chunk; does not seem to work on macs
+
+# see function that was created previously
+biplot_results <- quiet_biplot(otu_lung_pca, type = "t")
+
+# example for replacing specimen labels with CR or JL
+#  biplot(prcomp(otu_lung_hel), xlabs=ifelse(str_detect(lung_df$vendor, "Charles_River"), "CR", "JL")) # arrow.len = 0 will also remove warnings, at the cost of losing the arrowhead
 ```
 
 ### 4.1.2 Trees and heat maps  
+Next we'll examine two approaches to constructing heat maps, using lung specimens.    
 
+#### 4.1.2.a ggplot implementation  
 [Descriptive text here]  
 
-```{r heatmap_prep}
+```{r ggheatmap_prep}
 # Determine the order of OTUs based on means within Lung specimens
 otu_order <- names(sort(colMeans(otu_lung[, stringr::str_detect(colnames(otu_lung), "Otu")]), decreasing = TRUE))
 
 heat_df <- otu_lung %>% 
-  select(specimen, log_IL1a, otu_order[1:20]) %>%
-  gather(key = OTU, value = Percentage, -log_IL1a, -specimen, factor_key = TRUE) #%>%
+  select(specimen, log_IL1a, otu_order[1:20]) %>% # Select the top 20 OTUs
+  gather(key = OTU, value = Percentage, -log_IL1a, -specimen, factor_key = TRUE) #%>% # Reshape the dataframe from wide to long
   # group_by(OTU) %>%
   # summarize(Mean_perc = mean(Percentage)) %>%
   # ungroup()
@@ -317,25 +346,29 @@ heat_df <- otu_lung %>%
 ```{r ggheatmap, fig.height=8, fig.width=12}
 # Note that the OTU levels are sorted in reverse order of abundance here - we could adjust this if desired.
 ggplot(heat_df, aes(x = specimen, y = OTU)) +
-  geom_tile(aes(fill = Percentage)) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1), plot.margin = unit(c(0.5,0.5,0.5,1),"cm")) +
-  scale_fill_gradient(low = "white", high = "dark blue")
+  geom_tile(aes(fill = Percentage)) + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), plot.margin = unit(c(0.5,0.5,0.5,1),"cm")) + # Extra plot padding is necessary due to the rotation of x-axis labels.
+  scale_fill_gradient(low = "white", high = "dark blue") + # This allows us to specify the colors used within the heatmap
+  labs(title = "Relative abundance of top OTUs by Specimen", x = "Lung Tissue Specimen")
 ```
 
+#### 4.1.2.b Base implementation & dendrogram  
+Next, we'll explore a different approach using base R functionality. This time we'll use dissimilarity data and contruct dendrograms to go with the plot.  
+
 ```{r dendro_heatmap, fig.height=8, fig.width=12}
-# Unfortunately, filtering and other tidyverse functions strip rownames, but rownames are useful for pulling information out of matrices.
-# Fortunately, there is a function to easily put the specimen column back into rownames
+# Unfortunately, filtering and other tidyverse functions strip rownames, and rownames are useful for pulling information out of matrices.
+# However, there is a function to easily put the specimen column back into rownames
 heat_df <- dplyr::filter(otu_df, tissue_type == "Lung") %>%
   droplevels() %>% 
-  column_to_rownames("specimen") %>%
-  select(otu_order[1:20])
+  column_to_rownames("specimen") %>% # This turns the specimen column into the rownames.
+  select(otu_order[1:20]) # Keep only the top 20 OTUs.
 
-# create Bray-Curtis matrix for specimens
+# Create Bray-Curtis matrix for lung specimens
 bc_lung_spec <- vegdist(select(heat_df, otu_order[1:20]), method = "bray")
-# The linkage method used will depend on the nature of the data
+# The linkage method to be used will depend on the nature of the data
 clust_lung_spec <- hclust(bc_lung_spec, method = "average")
 
-# create Bray-Curtis matrix for OTUs
+# Create Bray-Curtis matrix for OTUs
 bc_lung_otu <- vegdist(t(select(heat_df, otu_order[1:20])), method = "bray")
 clust_lung_otu <- hclust(bc_lung_otu, method = "average")
 
@@ -488,7 +521,6 @@ agg_df <- g_df %>%
 levels(agg_df$OTU) <- fct_inorder(paste0(otu_good_taxonomy[levels(agg_df$OTU), ]$Genus, " (", levels(agg_df$OTU), ")"))
 ```
 
-
 ```{r ra_lung, fig.height=8, fig.width=12}
 # This time, we'll create the final RA plot in one pass
 ggplot(agg_df, aes(x = OTU, y = Mean_perc, fill = Phylum)) + 
@@ -501,8 +533,8 @@ ggplot(agg_df, aes(x = OTU, y = Mean_perc, fill = Phylum)) +
   labs(title="Comparison of Lung Tissue across vendors", subtitle = "Ranked by Charles River lung tissue specimens", y = "% Relative Abundance")
 ```
 
-
 ## 4.2 Hypothesis testing  
+Next we'll explore how to conduct significance testing.  
 
 ### 4.2.1 PERMANOVA (adonis)  
 The following is an example of a permanova implementation using vegan::adonis().  
