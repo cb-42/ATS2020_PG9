@@ -39,16 +39,17 @@ paste("Welcome to ATS 2020, PG9", "-", "A Hands-On Introduction to Studying the 
 
 ## 1.4 Brief notes on R code syntax, best practices  
   - Include comments explaining what your code does. The primary beneficiary will likely be your future self!  
+  - Use ?function_name, such as `?ggplot` to view the help documentation for a function or library.  
   - Give your objects meaningful, formulaic names. This is not always easy when you create dozens or hundreds of variables.  
   - package_name::function_name()  
       - Main reason to do this is to avoid calling the wrong function of the same name, as we'll see with `dplyr::select()`. Also informs users what library a function is from. 
-  - Become familiar with and make use of the pipe operator: `%>%`. This can drastically improve the efficiency of your time spent coding, and is a natural fit for data wrangling workflows.  We'll see several examples of this in action.
+  - Become familiar with and make use of the pipe operator: `%>%`. This can drastically improve the efficiency of your time spent coding, and is a natural fit for data wrangling workflows.  We'll see several examples of this in action.  
   
-# II. Data Acquisition & Preparation
+# II. Data Acquisition & Preparation  
 We will be using 16S data resulting from mothur processing and metadata that was previously generated. All of this data is available [here](https://github.com/dicksonlunglab/mouse_lung_microbiome_variability/tree/master/mouse_lung_microbiome_heterogeneity).
 
 ## 2.1 Library Load  
-Before we begin bringing in the data to begin our analysis, we need to load the libraries that we'll use. Libraries contain additional code (primarily in the form of functions) and/or data that extend R's base functionality. A good practice is to keep a code chunk near the top of your script that contains all the libraries that are utilized in the analysis, so it's easy to keep track of all of the dependencies that your code has.
+Before we begin bringing in the data to begin our analysis, we need to load the libraries that we'll use. Libraries contain additional code (primarily in the form of functions) and/or data that extend R's base functionality. A good practice is to keep a code chunk near the top of your script that contains all the libraries that are utilized in the analysis, so it's easy to keep track of all of the dependencies that your code has.  
 
 ```{r libraries, message=FALSE}
 # This section contains typical libraries used in these analyses
@@ -202,7 +203,7 @@ avg_abs_df <- abs_df %>%
 ```{r abs_abundance_plot, fig.height = 8, fig.width = 12}
 # Create our bar chart using ggplot
 ggplot(avg_abs_df, aes(x = Type, y = mean_DNA_copies, fill = Type)) + # This brings in the dataframe and assigns columns to various plot elements
-  geom_col() + # The type of plot we want to construct. This is a wrapper for geom_bar(). See ?geom_bar() for more details.
+  geom_col() + # The type of plot we want to construct. This is a wrapper for geom_bar(). See ?geom_bar for more details.
   geom_errorbar(aes(ymin = mean_DNA_copies - SEM, ymax = mean_DNA_copies + SEM, width = 0.5)) + # An errorbar layer to be added to the bars
   scale_y_log10(labels = trans_format("log10", math_format(10^.x))) + # We could convert to log10 scale prior to plotting, or we can do it on the fly
   # geom_dotplot(data = abs_df, aes(y = DNA_copies_per_ul), binaxis = "y", dotsize = .6, stackdir = "center", stackratio = 1.5) +
@@ -588,6 +589,7 @@ anova(cage_cca) # Analyze the model
 ```
 
 # V. Relative Abundance of Key Community Members  
+[Descriptive text here]  
 
 ## 5.1 Identifying enriched taxonomic groups  
 
@@ -595,11 +597,11 @@ anova(cage_cca) # Analyze the model
 We'll make use of our previous mvabund results and examine whether there are any significant OTUs.  
 
 ```{r mva_pvals}
-# restructure, sort, filter to retrieve significant OTUs
+# Restructure, sort, filter to retrieve significant OTUs
 otu_ven_sigpvals <- data.frame(OTU = colnames(otu_mva_results$uni.p), uni_p = otu_mva_results$uni.p[2,]) %>%
-  filter(uni_p <= .05) %>%
+  filter(uni_p <= .05) %>% # The threshold here can be adjusted to the desired level.
   droplevels() %>%
-  arrange(uni_p) 
+  arrange(uni_p) # Orders the pvalues
 
 # label OTUS
 otu_ven_sigpvals$OTU <- fct_inorder(paste0(otu_good_taxonomy[levels(otu_ven_sigpvals$OTU), ]$Genus, " (", levels(otu_ven_sigpvals$OTU), ")"))
@@ -608,25 +610,26 @@ otu_ven_sigpvals$OTU <- fct_inorder(paste0(otu_good_taxonomy[levels(otu_ven_sigp
 Here is an example of formating a dataframe (in this case containing pvalues) for display in a report.  
 
 ```{r kable_mva_pvals, fig.height = 8, fig.width = 8}
-knitr::kable(otu_ven_sigpvals, caption = "Vendors, Significant OTUs (.05)", align = "l")
+knitr::kable(otu_ven_sigpvals, caption = "Vendors, Significant OTUs (.05)", align = "l") # Check out ?kable for further specifications.
 ```
 
 ### 5.1.2 Random forest (mean decrease in accuracy)  
-Note - this depends on whether we're using regression or classification. A generic variable importance plot is shown for one iteration of the model.
+Note: this depends on whether we're using regression or classification. A generic variable importance plot is shown for one iteration of the model. For classification as shown below, we prefer to use MeanDecreaseAccuracy as our feature importance metric rather than MeanDecreaseGini, due to increased bias in the latter.  
 
-```{r randomForest, cache = TRUE}
-# exclude Cage, select 42-Day Experiments
+```{r randomForest, fig.height=8, fig.width=8, cache = TRUE}
+# For lung specimens, retain only vendor & OTU columns
 rf_df <- dplyr::filter(otu_df, tissue_type == "Lung") %>% 
   dplyr::select(vendor, str_which(colnames(otu_df), "Otu")) %>% 
   droplevels()
   
 a <- Sys.time()
 set.seed(3462)
-rf_ven <- randomForest(vendor ~ ., data = rf_df, importance = TRUE)
+rf_vendors <- randomForest(vendor ~ ., data = rf_df, importance = TRUE) # Setting the importance parameter to TRUE allows us to obtain the variable importance info we're after.
 b <- Sys.time()
 b-a
 
-varImpPlot(rf_ven, scale = FALSE)
+# Basic variable importance plot
+varImpPlot(rf_vendors, scale = FALSE)
 ```
 
 In order to better gauge the robustness of these findings, let's run the random forest model 100 times (note: this took around 30 seconds on a powerful machine).
@@ -635,9 +638,9 @@ In order to better gauge the robustness of these findings, let's run the random 
 a <- Sys.time()
 nforest <- 100
 set.seed(3462)
-rf_list <- vector("list", nforest)
-for (i in seq_along(1:nforest)) {
-    rf_list[[i]] <- randomForest(vendor ~ ., data = rf_df, importance = TRUE)
+rf_list <- vector("list", nforest) # Initialize a list to store the randomForests
+for (i in seq_along(1:nforest)) { # Loops nforest number of times, creating a model and saving it into the list each time.
+    rf_list[[i]] <- randomForest(vendor ~ ., data = rf_df, importance = TRUE) 
 }
 b <- Sys.time()
 b-a
@@ -653,12 +656,12 @@ meas <- colnames(fi_df)[2] # "MeanDecreaseAccuracy"
 top_feat <- fi_df %>% dplyr::group_by(Feature) %>%
   summarize(`:=`(!!meas, mean(.data[[meas]]))) %>%
   arrange(desc(.data[[meas]])) %>% 
-        head(25) %>%
+  head(25) %>% # Top 25 features
   droplevels()
 
 # Retain only the top features
 fi_df <- dplyr::filter(fi_df, Feature %in% top_feat$Feature) %>% 
-        droplevels()
+  droplevels()
 fi_df$Feature <- forcats::fct_reorder(fi_df$Feature, fi_df[, 2], .fun = mean, .desc = TRUE)
 levels(fi_df$Feature) <- fct_inorder(paste0(otu_good_taxonomy[levels(fi_df$Feature), ]$Genus, " (", levels(fi_df$Feature), ")"))
 ```
@@ -666,50 +669,57 @@ levels(fi_df$Feature) <- fct_inorder(paste0(otu_good_taxonomy[levels(fi_df$Featu
 Next we'll create boxplots of the feature importance over the 100 random forest runs.
 
 ```{r rf_feature_importance, fig.height=10, fig.width=8}
-ggplot(fi_df, aes(x = Feature, y = fi_df[, 2])) + geom_boxplot(outlier.alpha = 0.4) + 
+ggplot(fi_df, aes(x = Feature, y = fi_df[, 2])) + 
+  geom_boxplot(outlier.alpha = 0.4) + 
   theme_bw() + 
   labs(y = meas, title = paste0("Feature Importance: vendor ~ microbiome"), subtitle = paste0("Model: rf_df \nRuns: ", length(rf_list), ", mtry: ", rf_list[[1]]$mtry)) + 
-  coord_flip() + 
+  coord_flip() + # Flip the axes for improved readability
   scale_x_discrete(limits = rev(levels(fi_df$Feature)))
 ```
 
 # VI. Community Diversity
+[Descriptive text here]  
 
 ## 6.1 α-diversity: within specimens
+[Descriptive text here]  
 
 ### Richness - how many unique taxa?
 ### Evenness - how evenly distributed?
 
 Relative abundance plots can be used here
 
-## 6.2 𝛽-diversity - across specimens  
+## 6.2 𝛽-diversity: across specimens  
+[Descriptive text here]  
 
-### Bray-Curtis
+### Bray-Curtis  
+[Descriptive text here]  
 
-### Unifrac
+### Unifrac  
+[Descriptive text here]  
 
 # VII. Reporting  
 Usually it's not enough that you've generated statistics or created visualizations. You also need to be able to share this work. Fortunately, there are a variety of ways to do this.
 
 ## 7.1 Exporting a dataframe  
-Here is an example of exporting `otu_lung` to a .csv file, which can then be opened in Excel or your spreadsheet editor of choice. Note that depending on your locale, you may need to use `write.csv2()` to obtain the desired results. As an additional exercise, try changing the name of the dataframe or the name of the output file.
+Here is an example of exporting `otu_lung` to a .csv file, which can then be opened in Excel or your spreadsheet editor of choice. Note that depending on your locale (whether , or ; is the expected separator), you may need to use `write.csv2()` to obtain the desired results. As an additional exercise, try changing the name of the dataframe or the name of the output file.  
 
 ```{r csv_export}
 # This will save a new file called otu_lung.csv in the current working directory
 write.csv(otu_lung, file = "otu_lung.csv")
 ```
 
-## 7.2 Saving a plot
-Next, we'll save a plot. Note that we will also have access to a folder with all of the plots after finishing step 7.3.
+## 7.2 Saving a plot  
+Next, we'll save a plot. Note that we will also have access to a folder with all of the plots after finishing step 7.3.  
 
 ```{r ggsave}
 # The optional `path` parameter can be added onto the filename, used to denote a different directory. Use ?ggsave to check out other parameters
 ggsave(filename = "testplot.png", plot = p, width = 12, height = 10, units = "cm")
 ```
 
-## 7.3 Knitting
+## 7.3 Generating a report: Knitting  
 If all goes well, we should also be able to create a report from the narrative and code contained within this R Markdown document that we've been working on. Click the Knit button (look for the blue ball of yarn) near the top of RStudio interface to generate the default report type, which is set to html for this document. An html document containing this report will be created in the current working directory and it will display as a popup window or in the RStudio Viewer pane. We can easily change the type of file that is created by altering the output type in the header at the top of this document.  
-Note that there will also be figure-html folder containing all of the plots created through the code chunks in this document. For example, if the Rmd file (the one we're using) is called PG9_Lung_Microbiome_Tutorial, then the figures would be located in: PG9_Lung_Microbiome_Tutorial_files/figure-html.  
+
+Note that there will also be a figure-html folder containing all of the plots created through the code chunks in this document. For example, if the Rmd file (the one we're using) is called PG9_Lung_Microbiome_Tutorial, then the figures would be located in: PG9_Lung_Microbiome_Tutorial_files/figure-html.  
 
 # VIII. Additional Resources  
 Resources for learning more about various topics.  
