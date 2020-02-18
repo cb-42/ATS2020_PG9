@@ -105,7 +105,8 @@ otu_taxonomy <- data.frame(OTU = rownames(tax1), Size = tax1[, 1], tax2, strings
 rownames(otu_taxonomy) <- rownames(tax1)
 
 # trim otu_taxonomy based on OTUs in otu_good
-otu_good_taxonomy <- otu_taxonomy[otu_taxonomy$OTU %in% colnames(otu_good), ]
+otu_good_taxonomy <- otu_taxonomy[otu_taxonomy$OTU %in% colnames(otu_good), ] %>%
+  droplevels() # Remove factor levels that have no values remaining due to removal
 rownames(otu_good_taxonomy) <- intersect(rownames(otu_taxonomy), colnames(otu_good))
 # otu_good_taxonomy <- as.data.frame(otu_good_taxonomy)   redundant in this case
 
@@ -616,10 +617,26 @@ knitr::kable(otu_ven_sigpvals, caption = "Vendors, Significant OTUs (.05)", alig
 ### 5.1.2 Random forest (mean decrease in accuracy)  
 Note: this depends on whether we're using regression or classification. A generic variable importance plot is shown for one iteration of the model. For classification as shown below, we prefer to use MeanDecreaseAccuracy as our feature importance metric rather than MeanDecreaseGini, due to increased bias in the latter.  
 
-```{r randomForest, fig.height=8, fig.width=8, cache = TRUE}
+```{r family_prep}
+# Aggregate the OTU data into family. This requires a fair amount of data reshaping and joining operations. Wrapping these steps into a function is ideal so that you don't have to retrace every step for simply changing a taxonomic level for aggregation (e.g. Phylum vs Family).
+fam_df <- otu_df %>%
+  dplyr::select(specimen, contains("Otu")) %>% # Keep only the specimen identifier and OTU columns
+  tidyr::gather(key = OTU, value = Percentage, -stringr::str_which(colnames(.), "Otu", negate = TRUE)) %>% # Take data into long form in preparation for join operation
+  dplyr::inner_join(dplyr::select(otu_good_taxonomy, OTU, Family), by = "OTU") %>% # Determine which columns to join from taxonomy table. In this example, we're adding the Family column.
+  dplyr::group_by(specimen, Family) %>%
+  dplyr::summarize(Percentage = sum(Percentage)) %>% # Note that this step removes any metadata columns which aren't grouped by
+  dplyr::ungroup() %>%
+  tidyr::spread(key = Family, value = Percentage) %>% # Return data from long form to wide
+  dplyr::inner_join(dplyr::select(otu_df, -contains("Otu")), by = "specimen") %>%
+  dplyr::select(specimen, reagent_tissue:IL1a, everything()) # Pull metadata coluns to the front, all Family columns follow afterwards
+```
+
+Next, we'll run a basic randomForest.  
+
+```{r randomForest, fig.height=8, fig.width=10, cache = TRUE}
 # For lung specimens, retain only vendor & OTU columns
-rf_df <- dplyr::filter(otu_df, tissue_type == "Lung") %>% 
-  dplyr::select(vendor, str_which(colnames(otu_df), "Otu")) %>% 
+rf_df <- dplyr::filter(fam_df, tissue_type == "Lung") %>% 
+  dplyr::select(vendor, levels(otu_good_taxonomy$Family)) %>% 
   droplevels()
   
 a <- Sys.time()
@@ -656,14 +673,13 @@ meas <- colnames(fi_df)[2] # "MeanDecreaseAccuracy"
 top_feat <- fi_df %>% dplyr::group_by(Feature) %>%
   summarize(`:=`(!!meas, mean(.data[[meas]]))) %>%
   arrange(desc(.data[[meas]])) %>% 
-  head(25) %>% # Top 25 features
+  head(20) %>% # Top 20 features
   droplevels()
 
 # Retain only the top features
 fi_df <- dplyr::filter(fi_df, Feature %in% top_feat$Feature) %>% 
   droplevels()
 fi_df$Feature <- forcats::fct_reorder(fi_df$Feature, fi_df[, 2], .fun = mean, .desc = TRUE)
-levels(fi_df$Feature) <- fct_inorder(paste0(otu_good_taxonomy[levels(fi_df$Feature), ]$Genus, " (", levels(fi_df$Feature), ")"))
 ```
 
 Next we'll create boxplots of the feature importance over the 100 random forest runs.
@@ -672,7 +688,7 @@ Next we'll create boxplots of the feature importance over the 100 random forest 
 ggplot(fi_df, aes(x = Feature, y = fi_df[, 2])) + 
   geom_boxplot(outlier.alpha = 0.4) + 
   theme_bw() + 
-  labs(y = meas, title = paste0("Feature Importance: vendor ~ microbiome"), subtitle = paste0("Model: rf_df \nRuns: ", length(rf_list), ", mtry: ", rf_list[[1]]$mtry)) + 
+  labs(y = meas, title = paste0("Feature Importance: vendor ~ Family microbiome"), subtitle = paste0("Model: rf_df \nRuns: ", length(rf_list), ", mtry: ", rf_list[[1]]$mtry)) + 
   coord_flip() + # Flip the axes for improved readability
   scale_x_discrete(limits = rev(levels(fi_df$Feature)))
 ```
