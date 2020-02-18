@@ -1,8 +1,11 @@
 ---
 title: "PG9_Lung_Microbiome_Tutorial"
 author: "Christopher Brown"
-date: "February 13, 2020 (updated)"
-output: html_document
+date: "February 18, 2020 (updated)"
+output:   
+  html_document:
+    toc: true
+    code_folding: show
 ---
 This report was built with R version `r getRversion()`. 
 
@@ -11,10 +14,10 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 # I. Introduction
-Welcome. [introduction goes here - reminder to download RStudio/necessary packages if attendees haven't already done so]  
+Welcome to the hands-on introduction to studying the lung microbiome. In this session we'll see how we can use R to perform data manipulation, modeling, visualization, and reporting as part of our analysis workflow. If you have not already done so, please download R, RStudio, and the necessary packages. See this [guide](https://github.com/cb-42/ATS2020_PG9) for more details.
 
 ## 1.1 Why RStudio?
-There are many quality of life features that aid in making your time spent coding more efficient and reproducible. For example, many keyboard shortcuts exist in RStudio for common tasks. Navigate to Help > Keyboard Shortcuts Help, for a full list. There are many other useful features, but a full discussion of them is outside the scope of this presentation.  
+There are many quality of life features that aid in making your time spent coding more efficient and reproducible. For example, many keyboard shortcuts exist in RStudio for common tasks. Navigate to Help > Keyboard Shortcuts Help, for a full list. There are many other useful features, but a full discussion of these is outside the scope of this presentation.  
 
 ## 1.2 Why R Markdown?  
   - Easily combine narrative, code, statistics, and visualizations in one document.  
@@ -22,20 +25,30 @@ There are many quality of life features that aid in making your time spent codin
   - Generate high quality reports in a variety of formats: pdf, html, slides... etc  
 
 ## 1.3 Navigating RStudio & an R Markdown script  
-R Markdown documents consist of narrative of text such as this and code chunks such as the one below. Code chunks are enclosed within two pairs of three backticks (for reference a backtick is denoted by `).  
+R Markdown documents consist of narrative of text such as this sentence and code chunks such as the section directly below. Code chunks are enclosed within two pairs of three backticks (for reference a backtick is denoted by `).  
 
 ```{r example_code_chunk}
 # This is an example of a comment within a code chunk.
 # The # symbol means that any text following it should not be treated as R code.
-# When R code is run in a code chunk it will be displayed inline - that is, within the document - just below the current code chunk.
-# The first line without a # symbol is R code, and it will be executed when this code chunk is run.
-# To execute an entire code chunk: green arrow in upper right of this section:
-# Alternatively, place your cursor on the line with R code, then use: cmd + enter (mac), ctrl + enter (pc)
+# When R code is run in a code chunk the resulting output will be displayed inline - that is, within the document - just below the current code chunk.
+# The first line without a # symbol is actual R code, and it will be executed when this code chunk is run.
+# To execute an entire code chunk: left click the green arrow in upper right of this section:
+# Alternatively, left click on the following line with R code, then use: cmd + enter (mac), ctrl + enter (pc). This will run a single line rather than the entire chunk.
 paste("Welcome to ATS 2020, PG9", "-", "A Hands-On Introduction to Studying the Lung Microbiome")
 ```
 
-## 1.4 Library Load  
-Before we begin bringing in the data to begin our analysis, we need to load the libraries that we'll use. Libraries contain additional code (primarily functions) and/or data that expand R's base functionality. A good practice is to keep a code chunk near the top of your script that contains all the libraries that are utilized in the analysis, so it's easy to keep track of all of the dependencies that your code has.
+## 1.4 Notes on R code syntax, best practices  
+  - Include comments explaining what your code does. The primary beneficiary will likely be your future self!  
+  - Give your objects meaningful, formulaic names. This is not always easy when you create dozens or hundreds of variables.  
+  - package_name::function_name()  
+      - Main reason to do this is to avoid calling the wrong function of the same name, as we'll see with `dplyr::select()`. Also informs users what library a function is from. 
+  - Become familiar with and make use of the pipe operator: `%>%`. This can drastically improve the efficiency of your time spent coding, and is a natural fit for data wrangling workflows.  We'll see several examples of this in action.
+  
+# II. Data Acquisition & Preparation
+We will be using 16S data resulting from mothur processing and metadata that was previously generated. All of this data is available [here](https://github.com/dicksonlunglab/mouse_lung_microbiome_variability/tree/master/mouse_lung_microbiome_heterogeneity).
+
+## 2.1 Library Load  
+Before we begin bringing in the data to begin our analysis, we need to load the libraries that we'll use. Libraries contain additional code (primarily in the form of functions) and/or data that extend R's base functionality. A good practice is to keep a code chunk near the top of your script that contains all the libraries that are utilized in the analysis, so it's easy to keep track of all of the dependencies that your code has.
 
 ```{r libraries, message = FALSE}
 # This section contains typical libraries used in these analyses
@@ -53,16 +66,6 @@ library(scales)         # used in formatting relative abundance % labels; unit_f
 library(RColorBrewer)   # brewer.pal() for generating custom palettes
 library(knitr)          # kable(), for displaying nicer tables in html/pdf output
 ```
-
-## 1.5 Notes on R code syntax, best practices  
-  - package_name::function_name()  
-      - Main reason to do this is to avoid calling the wrong function of the same name, as we'll see with dplyr::select(). Also informs users what library a function is from. 
-  - Give your objects meaningful, formulaic names (not always easy when you create dozens or hundreds of them)  
-  - Include comments explaining what your code does (the primary beneficiary will likely be your future self)  
-  - Become familiar with and make use of the pipe operator: `%>%`. This can drastically improve the efficiency of your time spent coding, and is a natural fit for data wrangling workflows.
-  
-# II. Data Preparation
-We will be using 16S data resulting from mothur processing and metadata that was previously generated. All of this data is available [here](https://github.com/dicksonlunglab/mouse_lung_microbiome_variability/tree/master/mouse_lung_microbiome_heterogeneity).
 
 ```{r load_16S_rawdata}
 # For ease of use, place the processed 16S data files of interest into the same directory as your current RStudio project
@@ -83,7 +86,7 @@ rownames(otu_good) <- str_remove(rownames(otu_good), "_S\\d+")
 
 # It's a good idea to inspect the data regularly with tools such as dim(), str(), head(), tail(), summary()... This will help in catching errors earlier
 dim(otu_good) # dim(otu_good)[1] observations (samples) x dim(otu_good)[2] features (OTUs above .1% population threshold)
-otu_good[1:20, 1:10] # use other means of showing a glimpse of the data?
+otu_good[1:20, 1:10] # Examine first 20 rows, 10 columns. Use other means of showing a glimpse of the data?
 
 
 # II. Read in cons.taxonomy (for each OTU: taxonomic levels down to Genus, if possible)
@@ -103,7 +106,7 @@ rownames(otu_good_taxonomy) <- intersect(rownames(otu_taxonomy), colnames(otu_go
 otu_good_taxonomy <- as.data.frame(otu_good_taxonomy)
 
 dim(otu_good_taxonomy)
-otu_good_taxonomy[1:20,]
+otu_good_taxonomy[1:10,] # Examine the first 10 rows. These 10 OTUs coincide with the glimpse we took of otu_good.
 ```
 
 ```{r metadata_wrangling, include = FALSE}
@@ -193,11 +196,12 @@ avg_abs_df <- abs_df %>%
 ggplot(avg_abs_df, aes(x = Type, y = mean_DNA_copies, fill = Type)) +
   geom_col() + 
   geom_errorbar(aes(ymin = mean_DNA_copies - SEM, ymax = mean_DNA_copies + SEM, width = 0.5)) +
-  scale_y_log10() + # We could convert to log10 scale prior to plotting, or we can do it on the fly
+  scale_y_log10(labels = trans_format("log10", math_format(10^.x))) + # We could convert to log10 scale prior to plotting, or we can do it on the fly
   # geom_dotplot(data = abs_df, aes(y = DNA_copies_per_ul), binaxis = "y", dotsize = .6, stackdir = "center", stackratio = 1.5) +
   geom_jitter(data = abs_df, aes(y = DNA_copies_per_ul), shape = 1, size = 2) + # shape 1 is an unfilled circle
   theme_bw() +
-  labs(x = "Specimen or Control Type", y = "log10 mean_DNA_copies")
+  labs(x = "Control or Specimen Type", y = "log10 mean_DNA_copies per µL", title = "Absolute abundance of negative controls and lung specimens") +
+  annotation_logticks(sides = "l")
 ```
 
 # IV. Comparing Community Composition
