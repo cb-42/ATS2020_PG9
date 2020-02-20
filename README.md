@@ -9,7 +9,7 @@ This is a guide for acquiring the course materials for ATS 2020 PG9: A HANDS-ON 
 Pre-course preparation
 ======================
 
-Prior to starting the section entitled Hands-On: A Crash Course in Microbiome Analysis: Part 1 several pieces of software need to be acquired.
+Prior to starting the section entitled Hands-On: A Crash Course in Microbiome Analysis: Part 1 several pieces of software need to be acquired. Completing these first three steps is required in order to be able to follow along during the live hands-on presentation. It should take between 15-30 minutes to complete these preparatory tasks.
 
 I. R
 ----
@@ -37,3 +37,10 @@ Next, install and load the course package.
     library(NAME_TBD)
 
 This package includes all of the data and code necessary to follow along during the hands-on session.
+
+Completing these first three steps is required in order to be able to follow along with the hands-on presentation. It should take between 15-30 minutes to complete these tasks.
+
+IV. Introduction to R (optional: 90-120 minutes)
+------------------------------------------------
+
+It would also be highly beneficial to be familiar with the basics of R programming prior to participating in the course, though it is not required. A great resource is [R for Data Science](https://r4ds.had.co.nz/). Reading chapters 1 through 5 will familiarize you with the R design philosophy and syntax you'll see during the hands-on presentation.
