@@ -529,14 +529,14 @@ levels(agg_df$OTU) <- fct_inorder(paste0(otu_good_taxonomy[levels(agg_df$OTU), ]
 This time, we'll create the final RA plot in one pass.  
 
 ```{r plot_ra_lung, fig.height=8, fig.width=12}
-ggplot(agg_df, aes(x = OTU, y = Mean_perc, fill = Phylum)) + 
+(ra_vend_plot <- ggplot(agg_df, aes(x = OTU, y = Mean_perc, fill = Phylum)) + 
   geom_col() + # use show.legend = FALSE to remove the legend entirely
   facet_grid(vendor ~ .) +
   geom_errorbar(aes(ymin = Mean_perc - SEM, ymax = Mean_perc + SEM, width = 0.3)) + 
   theme_bw() +
   theme(panel.grid = element_blank(), axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "top", plot.margin = unit(c(0.5,0.5,0.5,1),"cm"), legend.title = element_blank()) + 
   scale_y_continuous(labels = unit_format(suffix = "%")) + 
-  labs(title="Comparison of Lung Tissue across vendors", subtitle = "Ranked by Charles River lung tissue specimens", y = "% Relative Abundance")
+  labs(title="Comparison of Lung Tissue across vendors", subtitle = "Ranked by Charles River lung tissue specimens", y = "% Relative Abundance"))
 ```
 
 ## 4.2 Hypothesis testing  
@@ -553,29 +553,30 @@ adonis(otu_lung_hel~otu_lung$vendor, method="euclidean", permutations = 10000) #
 ```
 
 ### 4.2.2 mvabund  
-This may take some time to finish (about 4.5 minutes on a powerful machine), so while the model is running, we'll discuss some other topics. [additional explanation, topics here]. For code chunks that take a while to execute, whether due to statistical analyses or visualizations, it may be beneficial to set the code chunk cache parameter to TRUE. This will enable you to recreate your report much more quickly when making small changes elsewhere.
+Because this may take some time to finish (about 4.5 minutes on a powerful machine), the following code is commented out to prevent it slowing down the creation of our report, which we'll get to later on. To run this section at a future point that's convenient for you, begin by simply highlighting all of the lines in the code chunk and then using CTRL + Shift + C to uncomment the code (mac). [additional explanation, topics here]. For code chunks that take a while to execute, whether due to statistical analyses or visualizations, it may be beneficial to set the code chunk cache parameter to TRUE. This will enable you to recreate your report much more quickly when making small changes elsewhere.
 
 ```{r mvabund, cache=TRUE}
-a <- Sys.time() # Sometimes this can take a while, so it might be useful to keep track of the time with start/stop points to allow us to compute the duration.
-otu_mva <- mvabund(otu_lung[,str_which(colnames(otu_lung), "Otu")]) # select only lung specimens and Otu columns
-otu_ven_many <- manyglm(otu_mva ~ otu_lung$vendor)
-otu_mva_results <- anova(otu_ven_many, p.uni="adjusted")
-b <- Sys.time()
-b - a
-
-plot(otu_ven_many) # Residual plot
-otu_mva_results$table # Signif
-
-# Analysis of Deviance Table
+# a <- Sys.time() # Sometimes this can take a while, so it might be useful to keep track of the time with start/stop points to allow us to compute the duration.
+# otu_mva <- mvabund(otu_lung[,str_which(colnames(otu_lung), "Otu")]) # select only lung specimens and Otu columns
+# otu_ven_many <- manyglm(otu_mva ~ otu_lung$vendor)
+# otu_mva_results <- anova(otu_ven_many, p.uni="adjusted")
+# b <- Sys.time()
+# b - a
 # 
-# Model: manyglm(formula = otu_mva ~ otu_lung$vendor)
+# plot(otu_ven_many) # Residual plot
+# otu_mva_results$table # Signif
 # 
-# Multivariate test:
-#                 Res.Df Df.diff   Dev Pr(>Dev)    
-# (Intercept)         39                           
-# otu_lung$vendor     38       1 797.9    0.001 ***
-# ---
-# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+# # Example output
+# # Analysis of Deviance Table
+# #
+# # Model: manyglm(formula = otu_mva ~ otu_lung$vendor)
+# #
+# # Multivariate test:
+# #                 Res.Df Df.diff   Dev Pr(>Dev)
+# # (Intercept)         39
+# # otu_lung$vendor     38       1 797.9    0.001 ***
+# # ---
+# # Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 ```
 
 ### 4.2.3 constrained ordination  
@@ -595,23 +596,29 @@ anova(cage_cca) # Analyze the model
 ## 5.1 Identifying enriched taxonomic groups  
 
 ### 5.1.1 mvabund  
-We'll make use of our previous mvabund results and examine whether there are any significant OTUs.  
+While we could make use of our previous mvabund results and examine whether there are any significant taxa, for time considerations we'll show only the code to do so.  
 
 ```{r mva_pvals}
-# Restructure, sort, filter to retrieve significant OTUs
-otu_ven_sigpvals <- data.frame(OTU = colnames(otu_mva_results$uni.p), uni_p = otu_mva_results$uni.p[2,]) %>%
-  filter(uni_p <= .05) %>% # The threshold here can be adjusted to the desired level.
-  droplevels() %>%
-  arrange(uni_p) # Orders the pvalues
-
-# label OTUS
-otu_ven_sigpvals$OTU <- fct_inorder(paste0(otu_good_taxonomy[levels(otu_ven_sigpvals$OTU), ]$Genus, " (", levels(otu_ven_sigpvals$OTU), ")"))
+# # The following lines could be run with an mvabund model
+# # Restructure, sort, filter to retrieve significant OTUs
+# otu_ven_sigpvals <- data.frame(OTU = colnames(otu_mva_results$uni.p), uni_p = otu_mva_results$uni.p[2,]) %>%
+#   filter(uni_p <= .05) %>% # The threshold here can be adjusted to the desired level.
+#   droplevels() %>%
+#   arrange(uni_p) # Orders the pvalues
+# 
+# # label OTUS
+# otu_ven_sigpvals$OTU <- fct_inorder(paste0(otu_good_taxonomy[levels(otu_ven_sigpvals$OTU), ]$Genus, " (", levels(otu_ven_sigpvals$OTU), ")"))
 ```
 
-Here is an example of formating a dataframe (in this case containing pvalues) for display in a report.  
+Here is an example of formatting a dataframe (in this case containing pvalues) for display in a report.  
 
 ```{r kable_mva_pvals, fig.height = 8, fig.width = 8}
-knitr::kable(otu_ven_sigpvals, caption = "Vendors, Significant OTUs (.05)", align = "l") # Check out ?kable for further specifications.
+# Note that this is an example constructed for illustration purposes only
+mva_sigpvals <- data.frame(Family = c("Lachnospiraceae", "Erysipelotrichaceae", "Porphyromonadaceae", "Clostridiaceae_1", "Streptococcaceae", "Lactobacillaceae"), uni_p = c(0.001, 0.003, 0.015, 0.016, 0.017, 0.017))
+knitr::kable(mva_sigpvals, caption = "Vendors, Significant OTUs (.05)", align = "l") # Check out ?kable for further specifications.
+
+# # This example would use the output from previous code chunk rather than our arbitrary dataframe
+# knitr::kable(otu_ven_sigpvals, caption = "Vendors, Significant OTUs (.05)", align = "l")
 ```
 
 ### 5.1.2 Random forest (mean decrease in accuracy)  
@@ -729,7 +736,7 @@ Next, we'll save a plot. Note that we will also have access to a folder with all
 
 ```{r ggsave}
 # The optional `path` parameter can be added onto the filename, used to denote a different directory. Use ?ggsave to check out other parameters
-ggsave(filename = "testplot.png", plot = p, width = 12, height = 10, units = "cm")
+ggsave(filename = "testplot.png", plot = ra_vend_plot, width = 30, height = 30, units = "cm")
 ```
 
 ## 7.3 Generating a report: Knitting  
