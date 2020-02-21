@@ -41,3 +41,8 @@ Completing these first three steps is required in order to be able to follow alo
 
 ## IV. Introduction to R (optional: 90-120 minutes)  
 It would also be highly beneficial to be familiar with the basics of R programming prior to participating in the course, though it is not required. A great resource is [R for Data Science](https://r4ds.had.co.nz/). Reading chapters 1 through 5 will familiarize you with the R design philosophy and syntax you'll see during the hands-on presentation.  
+
+## V. Knit the Tutorial (optional: < 5 minutes)  
+Finally, the .Rmd filed included with this course package can be assembled into an html report by cliking the Knit button inside RStudio.  
+
+![Knit](images/knit.png)
