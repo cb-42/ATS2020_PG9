@@ -1,7 +1,7 @@
 ---
 title: "PG9_Lung_Microbiome_Tutorial"
 author: "Christopher Brown"
-date: "February 18, 2020 (updated)"
+date: "February 21, 2020 (updated)"
 output:   
   html_document:
     toc: true
@@ -25,7 +25,7 @@ There are many quality of life features that aid in making your time spent codin
   - Generate high quality reports in a variety of formats: pdf, html, slides... etc  
 
 ## 1.3 Navigating RStudio & an R Markdown script  
-R Markdown documents consist of narrative of text such as this sentence and code chunks such as the section directly below. Code chunks are enclosed within two pairs of three backticks (for reference a backtick is denoted by `).  
+R Markdown documents consist of narrative of text such as this sentence and code chunks such as the section directly below. Code chunks are enclosed within two pairs of three backticks (for reference a backtick is denoted by: ``` ` ```).  
 
 ```{r example_code_chunk}
 # This is an example of a comment within a code chunk.
@@ -164,7 +164,15 @@ otu_df$specimen <- as.character(otu_df$specimen) # let's convert 'specimen' back
 # otu_df$Organ %>% summary() %>% sum() # ditto; 32 NAs for organs
 ```
 
-## 2.4 Palette Preparation  
+Here is a glimpse of the metadata:
+
+```{r view_meta}
+# The following lines of code randomly sample and display 10 rows from the metadata dataframe
+set.seed(2358)
+kable(dplyr::sample_n(meta_df, 10), caption = "Metadata, 10 randomly sampled rows", align = "l")
+```
+
+## 2.4 Color Palette Preparation  
 We'll also create a custom palette for use in some of our visualizations. Although we might not realize we need this until later in the analysis, it makes sense to include elements like this in the preparation part of your analysis. Apart from the organizational benefit, code that relies on the palette won't run if the palette hasn't been defined - so it is best to define the palette before creating any visualizations.  
 
 ```{r pal_prep}
@@ -707,7 +715,7 @@ ggplot(fi_df, aes(x = Feature, y = fi_df[, 2])) +
 [Descriptive text here]  
 
 ### Richness - how many unique taxa?
-### Evenness - how evenly distributed?
+### Evenness - how evenly distributed?  
 
 Relative abundance plots can be used here
 
@@ -736,7 +744,7 @@ Next, we'll save a plot. Note that we will also have access to a folder with all
 
 ```{r ggsave}
 # The optional `path` parameter can be added onto the filename, used to denote a different directory. Use ?ggsave to check out other parameters
-ggsave(filename = "testplot.png", plot = ra_vend_plot, width = 30, height = 30, units = "cm")
+ggsave(filename = "testplot.pdf", plot = ra_vend_plot, width = 30, height = 30, units = "cm")
 ```
 
 ## 7.3 Generating a report: Knitting  
