@@ -4,7 +4,11 @@ author: "Christopher Brown"
 date: "February 21, 2020 (updated)"
 output:   
   html_document:
+    df_print: paged
     toc: true
+    toc_float:
+      collapsed: false
+      smooth_scroll: false
     code_folding: show
 ---
 This report was built with R version `r getRversion()`. 
@@ -25,7 +29,7 @@ There are many quality of life features that aid in making your time spent codin
   - Generate high quality reports in a variety of formats: pdf, html, slides... etc  
 
 ## 1.3 Navigating RStudio & an R Markdown script  
-R Markdown documents consist of narrative of text such as this sentence and code chunks such as the section directly below. Code chunks are enclosed within two pairs of three backticks (for reference a backtick is denoted by: ``` ` ```).  
+R Markdown documents consist of narrative of text such as this sentence and code chunks such as the section directly below. Code chunks are enclosed within two pairs of three backticks. For reference a backtick is denoted by: ``` ` ```.  
 
 ```{r example_code_chunk}
 # This is an example of a comment within a code chunk.
@@ -110,8 +114,8 @@ otu_good_taxonomy <- otu_taxonomy[otu_taxonomy$OTU %in% colnames(otu_good), ] %>
 rownames(otu_good_taxonomy) <- intersect(rownames(otu_taxonomy), colnames(otu_good))
 # otu_good_taxonomy <- as.data.frame(otu_good_taxonomy)   redundant in this case
 
-dim(otu_good_taxonomy)
-otu_good_taxonomy[1:10,] # Examine the first 10 rows. These 10 OTUs coincide with the glimpse we took of otu_good.
+dim(otu_good_taxonomy) # Displays number of rows and columns
+otu_good_taxonomy # Examine the taxonomy dataframe. The first 10 OTUs coincide with the glimpse we took of otu_good. We're leveraging the df_print: paged option to be able to look through the dataframe in an html output.
 ```
 
 ## 2.3 Metadata  
@@ -222,7 +226,7 @@ ggplot(avg_abs_df, aes(x = Type, y = mean_DNA_copies, fill = Type)) + # This bri
   annotation_logticks(sides = "l") # Control whether/where logticks appear
 ```
 
-# IV. Comparing Community Composition  
+# IV. Comparing Community Composition {.tabset .tabset-fade .tabset-pills}
 
 ## 4.1 Visualization techniques  
 We will explore PCA ordinations, biplots, rank abundance plots (bar charts), heat maps, 
