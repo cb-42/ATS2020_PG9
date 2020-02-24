@@ -199,6 +199,8 @@ spec_abs <- readxl::read_xlsx("data/16S_EvaGreen__Heterogeneity1_Data.xlsx", she
 ctrl_abs <- readxl::read_xlsx("data/16S_EvaGreen__Heterogeneity1Ctrls_030618.xlsx", sheet = 2) %>% 
   dplyr::select(Sample_name = `Sample Name`, DNA_copies_per_ul = `Copies/ul Sample`) %>% # Rename the two columns of interest, and retain only these columns
   drop_na() # drop rows with mising values
+# Round up 0.57 DNA_copies to 1 (HomogCtrl_2)
+ctrl_abs[ctrl_abs[, "DNA_copies_per_ul"] < 1, ][, "DNA_copies_per_ul"] <- 1
 
 abs_df <- full_join(spec_abs, ctrl_abs, by = c("Sample_name", "DNA_copies_per_ul")) %>% # We could also use bind_rows() or rbind() in this scenario since we renamed the columns to match. However, for more complex operations, it's safer to use a join function and specify the key columns.
   mutate(Type = factor(case_when( # We need to create a factor containing the types of samples for creating separate bars in an upcoming visualization.
