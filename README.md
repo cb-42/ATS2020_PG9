@@ -14,7 +14,7 @@ Prior to starting the section entitled Hands-On: A Crash Course in Microbiome An
 I. R
 ----
 
-First you'll need to acquire R itself. This can be done directly from [CRAN](https://cran.r-project.org/). If R is already installed, we recommend updating to the current version. You can check your R verison with 3.6.0.
+First you'll need to acquire R itself. This can be done directly from [CRAN](https://cran.r-project.org/). If R is already installed, we recommend updating to the current version. You can check your R verison with `getRversion()`.
 
 II. RStudio
 -----------
