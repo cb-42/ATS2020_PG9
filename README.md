@@ -14,12 +14,12 @@ Prior to starting the section entitled Hands-On: A Crash Course in Microbiome An
 I. R
 ----
 
-First you'll need to acquire R itself. This can be done directly from [CRAN](https://cran.r-project.org/).
+First you'll need to acquire R itself. This can be done directly from [CRAN](https://cran.r-project.org/). If R is already installed, we recommend updating to the current version. You can check your R verison with 3.6.0.
 
 II. RStudio
 -----------
 
-Secondly, install the free desktop version of [RStudio](https://rstudio.com/products/rstudio/download/#download).
+Secondly, install the free desktop version of [RStudio](https://rstudio.com/products/rstudio/download/#download). We also recommend updating RStudio if a prior installation exists.
 
 III. Course Package
 -------------------

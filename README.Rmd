@@ -15,10 +15,10 @@ This is a guide for acquiring the course materials for ATS 2020 PG9: A HANDS-ON 
 Prior to starting the section entitled Hands-On: A Crash Course in Microbiome Analysis: Part 1 several pieces of software need to be acquired. Completing these first three steps is required in order to be able to follow along during the live hands-on presentation. It should take between 15-30 minutes to complete these preparatory tasks.  
 
 ## I. R
-First you'll need to acquire R itself. This can be done directly from [CRAN](https://cran.r-project.org/).
+First you'll need to acquire R itself. This can be done directly from [CRAN](https://cran.r-project.org/).  If R is already installed, we recommend updating to the current version. You can check your R verison with `r getRversion()`.  
 
 ## II. RStudio
-Secondly, install the free desktop version of [RStudio](https://rstudio.com/products/rstudio/download/#download).
+Secondly, install the free desktop version of [RStudio](https://rstudio.com/products/rstudio/download/#download). We also recommend updating RStudio if a prior installation exists.  
 
 ## III. Course Package
 Finally, the course package needs to be installed. To do this, open RStudio then copy, paste the following R code into the console, and then enter the code to execute it.
