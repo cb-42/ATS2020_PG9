@@ -90,7 +90,11 @@ otu_trim[which(otu_tmp < 0.1)] <- 0
 otu_good <- otu_trim[, which(colSums(otu_trim) > 0)] # keep only the OTUs which were present after setting quantities under 0.1 to 0
 
 # Trim _S from end of rownames(otu_good); note that it may be useful to keep these well identifiers in some analyses
-rownames(otu_good) <- str_remove(rownames(otu_good), "_S\\d+")
+# Also clean up extra underscores and Xs from rownames
+rownames(otu_good) <- str_remove(rownames(otu_good), "_S\\d+") %>%
+  str_replace_all(pattern = "[_X]+", replacement="_") %>%
+  str_remove(pattern="_$")
+
 
 # It's a good idea to inspect the data regularly with tools such as dim(), str(), head(), tail(), summary()... This will help in catching errors earlier
 dim(otu_good) # dim(otu_good)[1] observations (samples) x dim(otu_good)[2] features (OTUs above .1% population threshold)
