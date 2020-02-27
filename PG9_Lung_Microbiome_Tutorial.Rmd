@@ -1,7 +1,7 @@
 ---
 title: "PG9_Lung_Microbiome_Tutorial"
 author: "Christopher Brown"
-date: "February 21, 2020 (updated)"
+date: "February 27, 2020 (updated)"
 output:   
   html_document:
     df_print: paged
@@ -63,7 +63,7 @@ library(tidyverse)      # ggplot, dplyr, purrr, forcats, stringr... and other pa
 
 # II. machine learning & analysis packages
 library(vegan)          # decostand(), metaMDS(), scores(), rda(), ordispider(), adonis()
-library(mvabund)        # mvabund(), manyglm()
+# library(mvabund)        # mvabund(), manyglm() # This line can be uncommented when using mvabund as part of the 16S analysis.
 library(randomForest)   # randomForest()
 
 # III. formatting, plotting
@@ -232,7 +232,7 @@ ggplot(avg_abs_df, aes(x = Type, y = mean_DNA_copies, fill = Type)) + # This bri
   annotation_logticks(sides = "l") # Control whether/where logticks appear
 ```
 
-# IV. Comparing Community Composition {.tabset .tabset-fade .tabset-pills}
+# IV. Comparing Community Composition  
 
 ## 4.1 Visualization techniques  
 We will explore PCA ordinations, biplots, rank abundance plots (bar charts), heat maps, 
@@ -571,7 +571,7 @@ adonis(otu_lung_hel~otu_lung$vendor, method="euclidean", permutations = 10000) #
 ```
 
 ### 4.2.2 mvabund  
-Because this may take some time to finish (about 4.5 minutes on a powerful machine), the following code is commented out to prevent it slowing down the creation of our report, which we'll get to later on. To run this section at a future point that's convenient for you, begin by simply highlighting all of the lines in the code chunk and then using CTRL + Shift + C to uncomment the code (mac). [additional explanation, topics here]. For code chunks that take a while to execute, whether due to statistical analyses or visualizations, it may be beneficial to set the code chunk cache parameter to TRUE. This will enable you to recreate your report much more quickly when making small changes elsewhere.
+Because this may take some time to finish (about 4.5 minutes on a powerful machine), the following code is commented out to prevent it slowing down the creation of our report, which we'll get to later on. To run this section at a future point that's convenient for you, begin by simply highlighting all of the lines in the code chunk and then using CTRL + Shift + C to uncomment the code (mac). The code responsible for loading mvabund in section 2.1 will also need to be uncommented. [additional explanation, topics here]. For code chunks that take a while to execute, whether due to statistical analyses or visualizations, it may be beneficial to set the code chunk cache parameter to TRUE. This will enable you to recreate your report much more quickly when making small changes elsewhere.
 
 ```{r mvabund, cache=TRUE}
 # a <- Sys.time() # Sometimes this can take a while, so it might be useful to keep track of the time with start/stop points to allow us to compute the duration.
