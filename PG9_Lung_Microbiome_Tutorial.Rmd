@@ -1,7 +1,7 @@
 ---
 title: "PG9_Lung_Microbiome_Tutorial"
 author: "Christopher Brown"
-date: "February 27, 2020 (updated)"
+date: "March 2, 2020 (updated)"
 output:   
   html_document:
     df_print: paged
@@ -357,7 +357,8 @@ otu_order <- names(sort(colMeans(otu_lung[, stringr::str_detect(colnames(otu_lun
 
 heat_df <- otu_lung %>% 
   select(specimen, log_IL1a, otu_order[1:20]) %>% # Select the top 20 OTUs
-  gather(key = OTU, value = Percentage, -log_IL1a, -specimen, factor_key = TRUE) #%>% # Reshape the dataframe from wide to long
+  pivot_longer(cols = -c("specimen", "log_IL1a"), names_to = "OTU", values_to = "Percentage", # Pivots (longer) all columns expect those specified by -str_which()
+               names_ptypes = list(OTU = factor(levels = otu_order[1:20])))
   # group_by(OTU) %>%
   # summarize(Mean_perc = mean(Percentage)) %>%
   # ungroup()
@@ -415,10 +416,17 @@ ra_df <- otu_df %>% # Note at this is just one of several possible approaches to
 otu_order <- names(sort(colMeans(filter(ra_df, tissue_type == "Lung")[, str_detect(colnames(ra_df), "Otu")]), decreasing = TRUE))
 
 # Keep top 20 OTUs, then reshape the dataframe from wide to long format
+# g_df <- ra_df %>%
+#   select(str_which(colnames(ra_df), "Otu", negate = TRUE), colnames(ra_df[, otu_order[1:20]])) %>% # Keep non-OTU columns, followed by the 20 most abundant OTU columns
+#   gather(key = OTU, value = Percentage, -str_which(colnames(ra_df), "Otu", negate = TRUE), factor_key = TRUE) %>% # factor_key is important because we care about the order (levels) in OTU
+#   droplevels()
+
+# Keep top 20 OTUs, then reshape the dataframe from wide to long format
 g_df <- ra_df %>%
   select(str_which(colnames(ra_df), "Otu", negate = TRUE), colnames(ra_df[, otu_order[1:20]])) %>% # Keep non-OTU columns, followed by the 20 most abundant OTU columns
-  gather(key = OTU, value = Percentage, -str_which(colnames(ra_df), "Otu", negate = TRUE), factor_key = TRUE) # factor_key is important because we care about the order (levels) in OTU
-  
+  pivot_longer(cols = -str_which(colnames(ra_df), "Otu", negate = TRUE), names_to = "OTU", values_to = "Percentage",
+               names_ptypes = list(OTU = factor(levels = otu_order[1:20]))) # Ensuring OTU column is a factor is important due to the ordering expected in RA plots
+
 # Join Phylum column from taxonomy table
 tax_df <- otu_good_taxonomy[otu_good_taxonomy[,"OTU"] %in% otu_order[1:20], c("OTU", "Phylum")] # Keep only the rows from ranked OTU vector, and OTU + whatever taxonomic level to use for filling bars
 tax_df$OTU <- factor(tax_df$OTU, levels = otu_order[1:20]) # set OTU factor levels to be in the same order as in g_df. If this is not done, our OTU column will be coerced to a character vector when we join (we'll lose the levels)
@@ -525,7 +533,8 @@ otu_order <- names(sort(colMeans(filter(ra_df, vendor == "Charles_River")[, str_
 # Keep top 20 OTUs, then reshape the dataframe from wide to long format
 g_df <- ra_df %>%
   select(str_which(colnames(ra_df), "Otu", negate = TRUE), colnames(ra_df[, otu_order[1:20]])) %>% # Keep non-OTU columns, followed by the 20 most abundant OTU columns
-  gather(key = OTU, value = Percentage, -str_which(colnames(ra_df), "Otu", negate = TRUE), factor_key = TRUE) # factor_key is important because we care about the order (clevels) in OTU
+  pivot_longer(cols = -str_which(colnames(ra_df), "Otu", negate = TRUE), names_to = "OTU", values_to = "Percentage",
+               names_ptypes = list(OTU = factor(levels = otu_order[1:20]))) # Ensuring OTU column is a factor is important due to the ordering expected in RA plots
   
 # Join Phylum column from taxonomy table
 tax_df <- otu_good_taxonomy[otu_good_taxonomy[,"OTU"] %in% otu_order[1:20], c("OTU", "Phylum")] # Keep only the rows from ranked OTU vector, and OTU + whatever taxonomic level to use for filling bars
@@ -646,7 +655,7 @@ Note: this depends on whether we're using regression or classification. A generi
 # Aggregate the OTU data into family. This requires a fair amount of data reshaping and joining operations. Wrapping these steps into a function is ideal so that you don't have to retrace every step for simply changing a taxonomic level for aggregation (e.g. Phylum vs Family).
 fam_df <- otu_df %>%
   dplyr::select(specimen, contains("Otu")) %>% # Keep only the specimen identifier and OTU columns
-  tidyr::gather(key = OTU, value = Percentage, -stringr::str_which(colnames(.), "Otu", negate = TRUE)) %>% # Take data into long form in preparation for join operation
+  tidyr::pivot_longer(cols = -stringr::str_which(colnames(.), "Otu", negate = TRUE), names_to = "OTU", values_to = "Percentage") %>% # Take data into long form in preparation for join operation
   dplyr::inner_join(dplyr::select(otu_good_taxonomy, OTU, Family), by = "OTU") %>% # Determine which columns to join from taxonomy table. In this example, we're adding the Family column.
   dplyr::group_by(specimen, Family) %>%
   dplyr::summarize(Percentage = sum(Percentage)) %>% # Note that this step removes any metadata columns which aren't grouped by
