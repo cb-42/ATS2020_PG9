@@ -733,8 +733,32 @@ ggplot(fi_df, aes(x = Feature, y = fi_df[, 2])) +
 ## 6.1 α-diversity: within specimens
 [Descriptive text here]  
 
-### Richness - how many unique taxa?
+### Richness - how many unique taxa?  
 ### Evenness - how evenly distributed?  
+
+```{r alpha_div}
+shan_div <- diversity(otu_good) %>% 
+  data.frame(Shannon = .) %>%
+  rownames_to_column("specimen") %>%
+  left_join(otu_df[,1:6], by = "specimen") # Join first 6 metadata columns, allows for easier filtering
+
+lung_shan <- shan_div %>% 
+  dplyr::filter(tissue_type == "Lung") # Retain only lung specimens for visualization
+
+# Create summary statistics for bars/error bars  
+agg_lung_shan <- lung_shan %>%
+  group_by(vendor) %>%
+  summarize(Mean_Sh = mean(Shannon), SEM_Sh = sqrt(var(Shannon)/length(Shannon))) # Create summary statistics
+```
+
+```{r alpha_vis, fig.height=6, fig.width=8}
+ggplot(agg_lung_shan, aes(x = vendor, y = Mean_Sh, fill = vendor)) + # This brings in the aggregated dataframe and assigns columns to various plot elements
+  geom_col(show.legend = FALSE) + # Add bars representing the mean of specimens' Shannon diversity by vendor
+  geom_jitter(data = lung_shan, aes(x = vendor, y = Shannon), width = .2, alpha = .5, show.legend = FALSE) + # Use specimen level data, map columns to scatterplot attributes
+  geom_errorbar(aes(ymin = Mean_Sh - SEM_Sh, ymax = Mean_Sh + SEM_Sh), alpha = .5) + # Add an errorbar layer
+  theme_bw() + # A minimalist theme
+  labs(y = "Shannon Diversity", title = "Shannon Diversity of Lung Specimens by Vendor") # Adjust axis label and title
+```
 
 Relative abundance plots can be used here
 
@@ -784,6 +808,7 @@ Resources for learning more about various topics.
 [tidyverse](https://www.tidyverse.org/packages/)  
 [Ggplot2](https://ggplot2.tidyverse.org/)  
     - Includes several reference guides and learning sources  
+[Pivoting](https://tidyr.tidyverse.org/articles/pivot.html)  
 
 ## 8.3 Version control  
 Git/github  
