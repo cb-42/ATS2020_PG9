@@ -726,28 +726,40 @@ ggplot(fi_df, aes(x = Feature, y = fi_df[, 2])) +
 ### Richness - how many unique taxa?  
 ### Evenness - how evenly distributed?  
 
+First we'll compute the Shannon diversity with the `diversity()` function. Then we'll select the observations of interest and compute summary statistics.
+
 ```{r alpha_div}
 shan_div <- diversity(otu_good) %>% 
   data.frame(Shannon = .) %>%
   rownames_to_column("specimen") %>%
   left_join(otu_df[,1:6], by = "specimen") # Join first 6 metadata columns, allows for easier filtering
 
-lung_shan <- shan_div %>% 
+shan_lung <- shan_div %>% 
   dplyr::filter(tissue_type == "Lung") # Retain only lung specimens for visualization
 
 # Create summary statistics for bars/error bars  
-agg_lung_shan <- lung_shan %>%
+agg_shan_lung <- shan_lung %>%
   group_by(vendor) %>%
   summarize(Mean_Sh = mean(Shannon), SEM_Sh = sqrt(var(Shannon)/length(Shannon))) # Create summary statistics
 ```
 
+To visualize the results, we'll plot the specimens' diversities and means using `ggplot()`.
+
 ```{r alpha_vis, fig.height=6, fig.width=8}
-ggplot(agg_lung_shan, aes(x = vendor, y = Mean_Sh, fill = vendor)) + # This brings in the aggregated dataframe and assigns columns to various plot elements
+ggplot(agg_shan_lung, aes(x = vendor, y = Mean_Sh, fill = vendor)) + # This brings in the aggregated dataframe and assigns columns to various plot elements
   geom_col(show.legend = FALSE) + # Add bars representing the mean of specimens' Shannon diversity by vendor
-  geom_jitter(data = lung_shan, aes(x = vendor, y = Shannon), width = .2, alpha = .5, show.legend = FALSE) + # Use specimen level data, map columns to scatterplot attributes
+  geom_jitter(data = shan_lung, aes(x = vendor, y = Shannon), width = .2, alpha = .5, show.legend = FALSE) + # Use specimen level data, map columns to scatterplot attributes
   geom_errorbar(aes(ymin = Mean_Sh - SEM_Sh, ymax = Mean_Sh + SEM_Sh), alpha = .5) + # Add an errorbar layer
   theme_bw() + # A minimalist theme
   labs(y = "Shannon Diversity", title = "Shannon Diversity of Lung Specimens by Vendor") # Adjust axis label and title
+```
+
+We can also test the difference between the means of these groups for significance.
+
+```{r sig_shan_lung}
+# T-Test for the two vendors. This approach would also work if there were 3 or more groups.
+TukeyHSD(aov(shan_lung[,"Shannon"] ~ shan_lung[, "vendor"]))
+# TukeyHSD(aov(shan_lung$Shannon ~ shan_lung$vendor)) # This code produces the same result as above
 ```
 
 Relative abundance plots can be used here
@@ -757,7 +769,7 @@ Relative abundance plots can be used here
 
 Revisiting our PCA ordination of lung specimens by vendor:
 
-```{r betadiv}
+```{r betadiv, fig.height=10, fig.width=10}
 # This approach combines base R plotting functionality and vegan's ordispider function, which creates the lines connecting points to the centroids.
 # Unlike with ggplot(), these lines must all be run at once in order to produce the desired result.
 plot(otu_lung_pca, type = "n", font = 2, font.lab = 2, xlab = "PC1 (14.58% Explained)", ylab = "PC2 (10.68% Explained)", main = "PCA of Specimen Origin, colored by Vendor", display = "sites")
