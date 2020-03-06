@@ -1,5 +1,5 @@
 ---
-title: "PG9_Lung_Microbiome_Tutorial"
+title: "PG9: Lung Microbiome Tutorial"
 author: "Christopher Brown"
 date: "March 6, 2020 (updated)"
 output:   
@@ -260,7 +260,43 @@ otu_con_lung_pca <- rda(otu_con_lung_hel)
 summary(otu_con_lung_pca)$cont # 0.1782 0.08601 0.06845 proportion explained by first 3 axes
 ```
 
-```{r spider_con_lung, fig.height=10, fig.width=10}
+Next, we see the corresponding ordination (a spider plot).  
+
+```{r spider_con_lung_final, fig.height=10, fig.width=10}
+# This approach combines base R plotting functionality and vegan's ordispider function, which creates the lines connecting points to the centroids.
+# Unlike with ggplot(), these lines must all be run at once in order to produce the desired result.
+plot(otu_con_lung_pca, type = "n", font = 2, font.lab = 2, xlab = "PC1 (17.82% Explained)", ylab = "PC2 (8.60% Explained)", main = "PCA of Lung Tissue vs Controls, colored by Type", display = "sites")
+points(otu_con_lung_pca, pch = 19, col = pcapal[as.numeric(con_lung_df$reagent_tissue)]) # pch determines the point shape and col determines the colors to be used.
+ordispider(otu_con_lung_pca, con_lung_df$reagent_tissue, label = TRUE) # Draw lines from centroids to the points belonging to each group. 
+legend("topright", levels(con_lung_df$reagent_tissue), pch = 19, col = pcapal, title = "Type") # Format and add details to legends
+```
+
+Let's walk through how we arrived at this visualization, one line at a time. The `plot()` function creates axes based on the dimensions of the data. We also supply axis labels and a title.  
+
+```{r spider_con_lung1, fig.height=10, fig.width=10}
+plot(otu_con_lung_pca, type = "n", font = 2, font.lab = 2, xlab = "PC1 (17.82% Explained)", ylab = "PC2 (8.60% Explained)", main = "PCA of Lung Tissue vs Controls, colored by Type", display = "sites")
+```
+
+Next we'll add the points with the `points()` function. Note that we're setting the point shape and color with the `pch` and `col` parameters, respectively. We also have to run both of these lines at the same time to get the result we're after.  
+
+```{r spider_con_lung2, fig.height=10, fig.width=10}
+# Unlike with ggplot(), these lines must all be run at once in order to produce the desired result.
+plot(otu_con_lung_pca, type = "n", font = 2, font.lab = 2, xlab = "PC1 (17.82% Explained)", ylab = "PC2 (8.60% Explained)", main = "PCA of Lung Tissue vs Controls, colored by Type", display = "sites")
+points(otu_con_lung_pca, pch = 19, col = pcapal[as.numeric(con_lung_df$reagent_tissue)]) # pch determines the point shape and col determines the colors to be used.
+```
+
+We finish the main elements of a spider plot by drawing lines between the points and centroids, done with `ordispider()`. The second argument tells the function which variable we want to use for the centroids.  
+
+```{r spider_con_lung3, fig.height=10, fig.width=10}
+# Unlike with ggplot(), these lines must all be run at once in order to produce the desired result.
+plot(otu_con_lung_pca, type = "n", font = 2, font.lab = 2, xlab = "PC1 (17.82% Explained)", ylab = "PC2 (8.60% Explained)", main = "PCA of Lung Tissue vs Controls, colored by Type", display = "sites")
+points(otu_con_lung_pca, pch = 19, col = pcapal[as.numeric(con_lung_df$reagent_tissue)]) # pch determines the point shape and col determines the colors to be used.
+ordispider(otu_con_lung_pca, con_lung_df$reagent_tissue, label = TRUE) # Draw lines from centroids to the points belonging to each group.
+```
+
+Lastly, we add a legend to arrive at the final figure. Although other plot customizations could be made, this is where we'll stop for the purposes of this demonstration.  
+
+```{r spider_con_lung4, fig.height=10, fig.width=10}
 # This approach combines base R plotting functionality and vegan's ordispider function, which creates the lines connecting points to the centroids.
 # Unlike with ggplot(), these lines must all be run at once in order to produce the desired result.
 plot(otu_con_lung_pca, type = "n", font = 2, font.lab = 2, xlab = "PC1 (17.82% Explained)", ylab = "PC2 (8.60% Explained)", main = "PCA of Lung Tissue vs Controls, colored by Type", display = "sites")
