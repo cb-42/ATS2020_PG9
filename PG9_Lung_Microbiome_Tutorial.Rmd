@@ -808,6 +808,9 @@ If all goes well, we should also be able to create a report from the narrative a
 
 Note that there will also be a figure-html folder containing all of the plots created through the code chunks in this document. For example, if the Rmd file (the one we're using) is called PG9_Lung_Microbiome_Tutorial, then the figures would be located in: PG9_Lung_Microbiome_Tutorial_files/figure-html.  
 
+## 7.4 Cage Challenge  
+Congratulations! You've made it to the end of this introduction to lung microbiome analyses. Now that you've seen the basics, demonstrated between specimens and controls as well as within lung specimens, can you create additional analyses using the `cage` variable? Feel free to explore explore this and examine other possible relationships in the data on your own.  
+
 # VIII. Additional Resources  
 Resources for learning more about various topics.  
 
