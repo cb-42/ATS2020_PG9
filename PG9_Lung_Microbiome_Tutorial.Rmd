@@ -1,7 +1,7 @@
 ---
 title: "PG9_Lung_Microbiome_Tutorial"
 author: "Christopher Brown"
-date: "March 2, 2020 (updated)"
+date: "March 6, 2020 (updated)"
 output:   
   html_document:
     df_print: paged
@@ -258,10 +258,6 @@ otu_con_lung_pca <- rda(otu_con_lung_hel)
 
 # summary() produces a list which is rather messy to print out all at once. Let's just examine the importance of the principal components by accessing $cont
 summary(otu_con_lung_pca)$cont # 0.1782 0.08601 0.06845 proportion explained by first 3 axes
-
-# Permanova
-set.seed(8947) # Setting a seed allows for reproducibility. Both of these lines need to be run together for it to work.
-adonis(otu_con_lung_hel~con_lung_df$vendor, method="euclidean", permutations = 10000) # 9.999e-05 ***
 ```
 
 ```{r spider_con_lung, fig.height=10, fig.width=10}
@@ -271,7 +267,6 @@ plot(otu_con_lung_pca, type = "n", font = 2, font.lab = 2, xlab = "PC1 (17.82% E
 points(otu_con_lung_pca, pch = 19, col = pcapal[as.numeric(con_lung_df$reagent_tissue)]) # pch determines the point shape and col determines the colors to be used.
 ordispider(otu_con_lung_pca, con_lung_df$reagent_tissue, label = TRUE) # Draw lines from centroids to the points belonging to each group. 
 legend("topright", levels(con_lung_df$reagent_tissue), pch = 19, col = pcapal, title = "Type") # Format and add details to legends
-legend("topleft", legend = "Permanova: Difference between Lung Specimens and Controls: 9.999e-05") # Should signifiance test be include in the plot?
 ```
 
 #### 4.1.1.b Biplot  
@@ -311,10 +306,6 @@ otu_lung_pca <- rda(otu_lung_hel)
 
 # summary() produces a list which is rather messy to print out all at once. Let's just examine the importance of the principal components by accessing $cont
 summary(otu_lung_pca)$cont # 0.1458 0.10677 0.06776 proportion explained by first 3 axes
-
-# Permanova
-set.seed(8947) # Setting a seed allows for reproducibility. Both of these lines need to be run together for it to work.
-adonis(otu_lung_hel~otu_lung$vendor, method="euclidean", permutations = 10000) # 9.999e-05 ***
 ```
 
 ```{r spider_lung, fig.height=10, fig.width=10}
@@ -324,7 +315,6 @@ plot(otu_lung_pca, type = "n", font = 2, font.lab = 2, xlab = "PC1 (14.58% Expla
 points(otu_lung_pca, pch = 19, col = pcapal[as.numeric(otu_lung$vendor)]) # pch determines the point shape and col determines the colors to be used.
 ordispider(otu_lung_pca, otu_lung$vendor, label = TRUE) # Draw lines from centroids to the points belonging to each group.
 legend("topright", levels(otu_lung$vendor), pch = 19, col = pcapal, title = "Vendor") # Format and add details to legends
-legend("bottomright", legend = "Permanova: Difference between Specimen Origin: 9.999e-05") # Should signifiance test be include in the plot?
 ```
 
 #### 4.1.1.d Biplot  
@@ -573,8 +563,8 @@ Next we'll explore how to conduct significance testing.
 The following is an example of a permanova implementation using vegan::adonis().  
 
 ```{r adonis}
-# This code was used previously when we prepared our PCA ordination
-set.seed(8947) # setting a seed allows for reproducibility - both lines need to be run together
+# Permanova
+set.seed(8947) # setting a seed allows for reproducibility. Both of these lines need to be run together for it to work.
 adonis(otu_lung_hel~otu_lung$vendor, method="euclidean", permutations = 10000) # 9.999e-05 ***
 # The left hand side of the formula is the transformed data, and the right hand side is a vector (column) container the group identifiers of interest.
 ```
@@ -764,6 +754,17 @@ Relative abundance plots can be used here
 
 ## 6.2 𝛽-diversity: across specimens  
 [Descriptive text here]  
+
+Revisiting our PCA ordination of lung specimens by vendor:
+
+```{r betadiv}
+# This approach combines base R plotting functionality and vegan's ordispider function, which creates the lines connecting points to the centroids.
+# Unlike with ggplot(), these lines must all be run at once in order to produce the desired result.
+plot(otu_lung_pca, type = "n", font = 2, font.lab = 2, xlab = "PC1 (14.58% Explained)", ylab = "PC2 (10.68% Explained)", main = "PCA of Specimen Origin, colored by Vendor", display = "sites")
+points(otu_lung_pca, pch = 19, col = pcapal[as.numeric(otu_lung$vendor)]) # pch determines the point shape and col determines the colors to be used.
+ordispider(otu_lung_pca, otu_lung$vendor, label = TRUE) # Draw lines from centroids to the points belonging to each group.
+legend("topright", levels(otu_lung$vendor), pch = 19, col = pcapal, title = "Vendor") # Format and add details to legends
+```
 
 ### Bray-Curtis  
 [Descriptive text here]  
