@@ -1,7 +1,7 @@
 ---
 title: "PG9: Lung Microbiome Tutorial"
 author: "Christopher Brown"
-date: "March 6, 2020 (updated)"
+date: "March 9, 2020 (updated)"
 output:   
   html_document:
     df_print: paged
@@ -294,7 +294,7 @@ points(otu_con_lung_pca, pch = 19, col = pcapal[as.numeric(con_lung_df$reagent_t
 ordispider(otu_con_lung_pca, con_lung_df$reagent_tissue, label = TRUE) # Draw lines from centroids to the points belonging to each group.
 ```
 
-Lastly, we add a legend to arrive at the final figure. Although other plot customizations could be made, this is where we'll stop for the purposes of this demonstration.  
+Lastly, we add a legend to arrive at the final figure.    
 
 ```{r spider_con_lung4, fig.height=10, fig.width=10}
 # This approach combines base R plotting functionality and vegan's ordispider function, which creates the lines connecting points to the centroids.
@@ -302,6 +302,17 @@ Lastly, we add a legend to arrive at the final figure. Although other plot custo
 plot(otu_con_lung_pca, type = "n", font = 2, font.lab = 2, xlab = "PC1 (17.82% Explained)", ylab = "PC2 (8.60% Explained)", main = "PCA of Lung Tissue vs Controls, colored by Type", display = "sites")
 points(otu_con_lung_pca, pch = 19, col = pcapal[as.numeric(con_lung_df$reagent_tissue)]) # pch determines the point shape and col determines the colors to be used.
 ordispider(otu_con_lung_pca, con_lung_df$reagent_tissue, label = TRUE) # Draw lines from centroids to the points belonging to each group. 
+legend("topright", levels(con_lung_df$reagent_tissue), pch = 19, col = pcapal, title = "Type") # Format and add details to legends
+```
+
+`vegan` also supports additional ordinations such as ellipses. Simply adding an `ordiellipse` call with a color parameter (`col`) will give us the following plot. Although other plot customizations could be made, this is where we'll stop for the purposes of this example.
+
+```{r ellipse_con_lung, fig.height=10, fig.width=10}
+# This is very similar to the previous ordinaiton except that we're drawing ellipses rather than lines connecting the points to the centroids.
+plot(otu_con_lung_pca, type = "n", font = 2, font.lab = 2, xlab = "PC1 (17.82% Explained)", ylab = "PC2 (8.60% Explained)", main = "PCA of Lung Tissue vs Controls, colored by Type", display = "sites")
+points(otu_con_lung_pca, pch = 19, col = pcapal[as.numeric(con_lung_df$reagent_tissue)]) # pch determines the point shape and col determines the colors to be used.
+ordispider(otu_con_lung_pca, con_lung_df$reagent_tissue, label = TRUE) # Draw lines from centroids to the points belonging to each group.
+ordiellipse(otu_con_lung_pca, con_lung_df$reagent_tissue, col = pcapal) # Draw ellipses around the centroids for each group.
 legend("topright", levels(con_lung_df$reagent_tissue), pch = 19, col = pcapal, title = "Type") # Format and add details to legends
 ```
 
