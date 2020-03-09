@@ -26,7 +26,7 @@ There are many quality of life features that aid in making your time spent codin
 ## 1.2 Why R Markdown?  
   - Easily combine narrative, code, statistics, and visualizations in one document.  
   - Reproducibility  
-  - Generate high quality reports in a variety of formats: pdf, html, slides... etc  
+  - Generate high quality reports in a variety of formats: pdf, html, slides. We'll walk through the creation of an html report.  
 
 ## 1.3 Navigating RStudio & an R Markdown script  
 R Markdown documents consist of narrative of text such as this sentence and code chunks such as the section directly below. Code chunks are enclosed within two pairs of three backticks. For reference a backtick is denoted by: ``` ` ```.  
@@ -42,11 +42,13 @@ paste("Welcome to ATS 2020, PG9", "-", "A Hands-On Introduction to Studying the 
 ```
 
 ## 1.4 Brief notes on R code syntax, best practices  
+These following suggested practices will aid you as you begin writing your own code. We'll also demonstrate these throughout the tutorial.  
+
   - Include comments explaining what your code does. The primary beneficiary will likely be your future self!  
-  - Use ?function_name, such as `?ggplot` to view the help documentation for a function or library.  
-  - Give your objects meaningful, formulaic names. This is not always easy when you create dozens or hundreds of variables.  
-  - package_name::function_name()  
-      - Main reason to do this is to avoid calling the wrong function of the same name, as we'll see with `dplyr::select()`. Also informs users what library a function is from. 
+  - Use `?function_name`, such as `?ggplot` to view the help documentation for a function or library.  
+  - Give your objects meaningful, formulaic names so you can recall or determine what is inside the object. This is not always easy when you create dozens or hundreds of variables.  
+  - Utilize the following syntax where appropriate: `package_name::function_name()`  
+      - The main reason to do this is to avoid calling the wrong function of the same name, as we'll see with `dplyr::select()`. It also informs users which library a function is from. 
   - Become familiar with and make use of the pipe operator: `%>%`. This can drastically improve the efficiency of your time spent coding, and is a natural fit for data wrangling workflows.  We'll see several examples of this in action.  
   
 # II. Data Acquisition & Preparation  
@@ -172,7 +174,7 @@ otu_df$specimen <- as.character(otu_df$specimen) # let's convert 'specimen' back
 # otu_df$Organ %>% summary() %>% sum() # ditto; 32 NAs for organs
 ```
 
-Here is a glimpse of the metadata:
+Here is a glimpse of the metadata, done by randomly sampling 10 rows:  
 
 ```{r view_meta}
 # The following lines of code randomly sample and display 10 rows from the metadata dataframe
@@ -181,7 +183,7 @@ kable(dplyr::sample_n(meta_df, 10), caption = "Metadata, 10 randomly sampled row
 ```
 
 ## 2.4 Color Palette Preparation  
-We'll also create a custom palette for use in some of our visualizations. Although we might not realize we need this until later in the analysis, it makes sense to include elements like this in the preparation part of your analysis. Apart from the organizational benefit, code that relies on the palette won't run if the palette hasn't been defined - so it is best to define the palette before creating any visualizations.  
+We'll also create a custom color palette for use in some of our visualizations. Although we might not realize we need this until later in the analysis, it makes sense to include elements like this in the preparation part of your analysis. Apart from the organizational benefit, code that relies on the palette won't run if the palette hasn't been defined - so it is best to define the palette before creating any visualizations.  
 
 ```{r pal_prep}
 # for PCA ordinations; choose an 9 that covers the maximum number of factor levels (conditions) within a variable of interest
@@ -192,7 +194,7 @@ pcapal <- brewer.pal(9,"Set1")
 [Descriptive text here]  
 
 ## 3.1  ddPCR  
-We'll show an example using ddPCR, but first we need to load the data. Then we'll examine it using a bar chart created with `ggplot`.  
+We'll show an example using ddPCR, but first we need to load the data.  
 
 ```{r abs_abundance_prep}
 # The readxl library is installed along with tidyverse, but is not loaded with library(tidyverse). We can however access the read_xlsx function without loading readxl as shown below.
@@ -219,6 +221,8 @@ avg_abs_df <- abs_df %>%
   ungroup()
 ```
 
+Next, we'll examine this ddPCR data using a bar chart created with `ggplot`.  
+
 ```{r abs_abundance_plot, fig.height = 8, fig.width = 12}
 # Create our bar chart using ggplot
 ggplot(avg_abs_df, aes(x = Type, y = mean_DNA_copies, fill = Type)) + # This brings in the dataframe and assigns columns to various plot elements
@@ -233,9 +237,10 @@ ggplot(avg_abs_df, aes(x = Type, y = mean_DNA_copies, fill = Type)) + # This bri
 ```
 
 # IV. Comparing Community Composition  
+There are several tools we can use to compare the makeup of microbial communities.  
 
 ## 4.1 Visualization techniques  
-We will explore PCA ordinations, biplots, rank abundance plots (bar charts), heat maps, 
+In this subsection we will explore visualization methods including PCA ordinations, biplots, rank abundance plots (bar charts), and heat maps.  
 
 ### 4.1.1 PCA Ordination  
 As a first step, we need to create a PCA model using only the data needed to make our comparison of interest.  
@@ -317,7 +322,8 @@ legend("topright", levels(con_lung_df$reagent_tissue), pch = 19, col = pcapal, t
 ```
 
 #### 4.1.1.b Biplot  
-[biplot descriptive text]  
+A biplot can help us understand which microbial features may be more associated with certain specimens or specimen groups.  
+[additional biplot descriptive text]  
 
 ```{r biplot_con_lung, fig.height=10, fig.width=10}
 # Consider whether rownames should be shown, if so they may need to be truncated for visibility
