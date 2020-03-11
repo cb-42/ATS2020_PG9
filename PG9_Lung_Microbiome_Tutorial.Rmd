@@ -1,7 +1,7 @@
 ---
 title: "PG9: Lung Microbiome Tutorial"
 author: "Christopher Brown"
-date: "March 9, 2020 (updated)"
+date: "March 11, 2020 (updated)"
 output:   
   html_document:
     df_print: paged
@@ -777,6 +777,7 @@ ggplot(fi_df, aes(x = Feature, y = fi_df[, 2])) +
 [Descriptive text here]  
 
 ### Richness - how many unique taxa?  
+
 ### Evenness - how evenly distributed?  
 
 First we'll compute the Shannon diversity with the `diversity()` function. Then we'll select the observations of interest and compute summary statistics.
@@ -815,7 +816,36 @@ TukeyHSD(aov(shan_lung[,"Shannon"] ~ shan_lung[, "vendor"]))
 # TukeyHSD(aov(shan_lung$Shannon ~ shan_lung$vendor)) # This code produces the same result as above
 ```
 
-Relative abundance plots can be used here
+Rarefaction curves can also be used to explore α-diversity. First, the data needs to be prepared.  
+
+```{r rarefy_prep, warning=FALSE, cache=TRUE}
+# Generate the rarefaction data, combine with metadata, transform for plotting, and aggregate
+rarefy_agg <- rarefy(dplyr::select(otu_raw, -label, -numOtus), sample = 1:1000) %>% # subsample for each number in 1:1000; an alternative is to set sample = to the integer length of primary interest, e.g. 1000
+  data.frame(row.names = rownames(otu_good)) %>% # Use cleaned up rownames from otu_good rather than messy names from otu_raw
+  rownames_to_column("specimen") %>%
+  pivot_longer(-specimen, names_to = "Sample_Seq_Num", names_prefix = "N", names_ptypes = list(Sample_Seq_Num = numeric()), values_to = "Unique_Species") %>% # Transform data from long to wide format
+  left_join(dplyr::select(otu_df, specimen, reagent_tissue, vendor, tissue_type), by = "specimen") %>%  # Join reagent_tissue, vendor, and tissue_type columns
+  dplyr::filter((reagent_tissue == "Control") | (tissue_type == "Lung")) %>% # Keep only lung specimens and negative controls
+  group_by(vendor, Sample_Seq_Num) %>%
+  summarize(Mean_Species = mean(Unique_Species), SEM = sqrt(var(Unique_Species)/length(Unique_Species))) # Create summary statistics by vendor (negative controls are considered 'None')
+
+# write.table(rarefy_raw,file = "rarefy.txt") # Create intermediate table
+```
+
+To visualize the rarefaction curves, we'll use three `geom_line` layers as follows:
+
+```{r rare_plot, fig.height=6, fig.width=10}
+ggplot(rarefy_agg, aes(x = Sample_Seq_Num, y = Mean_Species, color = vendor)) +
+  geom_line(alpha = 0.5) + # Line for the mean
+  geom_line(aes(y = Mean_Species - SEM), linetype = "dashed") + # Lower standard error
+  geom_line(aes(y = Mean_Species + SEM), linetype = "dashed") + # Upper standard error
+  theme_bw() + 
+  theme(panel.grid = element_blank(), legend.position = "top", legend.title = element_blank()) + 
+  scale_color_hue(labels = c("Charles River", "Jackson Labs", "Negative Controls")) + # Fix legend labels
+  labs(x = "Number of Sequences Sampled", y = "Unique Species", title = "Rarefaction curves for lung specimens and negative controls")
+```
+
+Relative abundance plots can also be used here.
 
 ## 6.2 𝛽-diversity: across specimens  
 [Descriptive text here]  
