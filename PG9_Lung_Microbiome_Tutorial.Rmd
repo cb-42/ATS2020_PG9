@@ -1,7 +1,7 @@
 ---
 title: "PG9: Lung Microbiome Tutorial"
 author: "Christopher Brown"
-date: "March 11, 2020 (updated)"
+date: "May 15, 2020 (updated)"
 output:   
   html_document:
     df_print: paged
@@ -84,7 +84,7 @@ Next we'll bring in the 16S data from two mothur files which have the raw counts
 
 # I. Read in .shared (counts of sequences assigned to OTU #s)
 # Includes basic processing with selection of OTUs > 0.1 % of the population
-otu_raw <- read.table("data/Heterogeneity.shared.txt", row.names = 2, header = TRUE) # read in the data, treating the first row as column names
+otu_raw <- read.table("data/Heterogeneity.shared.txt", row.names = 2, header = TRUE, stringsAsFactors = FALSE) # read in the data, treating the first row as column names
 otu_trim <- otu_raw[, -c(1:2)] # drop the first 2 columns
 otu_trim <- as.matrix(otu_trim)
 otu_tmp <- vegan::decostand(otu_trim, "total") * 100 # standardization
@@ -107,7 +107,7 @@ otu_good[1:20, 1:10] # Examine first 20 rows, 10 columns. Try using other means 
 # Note that OTUs are in rows here rather than columns
 # 2 imports are required due to the combination of 2 different separators  
 tax1 <- read.table("data/Heterogeneity.0.03.cons.taxonomy.txt", sep = "\t", row.names = 1, header = TRUE, colClasses = c("character", "numeric", "character"))
-tax2 <- read.table("data/Heterogeneity.0.03.cons.taxonomy.txt", sep = ";", skip = 1, col.names = c("", "Phylum", "Class", "Order", "Family", "Genus", "")) %>% 
+tax2 <- read.table("data/Heterogeneity.0.03.cons.taxonomy.txt", sep = ";", skip = 1, col.names = c("", "Phylum", "Class", "Order", "Family", "Genus", ""), stringsAsFactors = FALSE) %>% 
   dplyr::select(-c(1, 7)) %>% # drop columns 1 and 7
   purrr::map_df(stringr::str_replace, "\\(.*.\\)", "") %>% # this essentially trims (100) and the like
   purrr::map_df(as.factor) # turns all present columns into factor type variables
@@ -131,11 +131,11 @@ In order to aid in dividing our samples into groupings, we'll also need metadata
 # In this section, we'll load in metadata/environmental data, and/or create it
 
 ## Load approach using metadata from github repo
-meta_df <- read.table("data/Heterogeneity.metadata.txt", sep = "\t", header = TRUE) 
-# Note that this will create factors out of all chr type columns
-#While - undesirable for 'specimen' but useful for 'reagent_tissue', 'litter', 'vendor', 'mouse', 'tissue_type', and 'cage'
-otu_df <- data.frame(meta_df, decostand(otu_good, "total") * 100)
-otu_df$specimen <- as.character(otu_df$specimen) # let's convert 'specimen' back to a chr-type
+meta_df <- read.table("data/Heterogeneity.metadata.txt", sep = "\t", header = TRUE, stringsAsFactors = TRUE,
+                       colClasses = c("specimen" = "character")) 
+# Note that this will create factors out of all text (string) columns, except for specimen which we enforced as character type.
+# Factors are useful for 'reagent_tissue', 'litter', 'vendor', 'mouse', 'tissue_type', and 'cage' variables.
+otu_df <- data.frame(meta_df, decostand(otu_good, "total") * 100, stringsAsFactors = FALSE)
 
 # Examples of metadata creation using regular expressions (regex) in a tidyverse pipeline
 # Note that extracting metadata from sample names is much easier if naming conventions are consistent in terms of spelling and placement
