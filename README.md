@@ -21,24 +21,16 @@ II. RStudio
 
 Secondly, install the free desktop version of [RStudio](https://rstudio.com/products/rstudio/download/#download). We also recommend updating RStudio if a prior installation exists.
 
-III. Course Package
--------------------
+III. Course Materials
+---------------------
 
-Finally, the course package needs to be installed. To do this, open RStudio then copy, paste the following R code into the console, and then enter the code to execute it.
+Next, the course materials need to be acquired and loaded. First, locate the green **Clone or download** button at the top right of this page, then download the ZIP contents. From your Downloads folder, extract the files from **ATS2020\_PG9-master.zip**. We recommend moving this unzipped/extracted directory either to your desktop or preferred workspace. You will need to navigate to this extracted directory in the next step.
 
-First, install the devtools package if needed, then load it:
+Next, launch RStudio. Then create a new project, by clicking **File &gt; New Project**, in the upper left of the RStudio interface. Click on **Existing Directory** and then browse to find the **ATS2020\_PG9-master** directory that was extracted. Finally, left click the file entitled **PG9\_Lung\_Microbiome\_Tutorial.Rmd** from the lower right pane in the RStudio inferface.
 
-    if (!require(devtools)) install.packages("devtools")
-    library(devtools)
+This extracted directory includes all of the data and code necessary to follow along during the hands-on session, though the only file you'll need to directly interact with is **PG9\_Lung\_Microbiome\_Tutorial.Rmd**. Completing these first three steps is required in order to be able to follow along with the hands-on presentation. It should take between 15-30 minutes to complete these tasks.
 
-Next, install and load the course package.
-
-    install_github("https://github.com/cb-42/NAME_TBD")  
-    library(NAME_TBD)
-
-This package includes all of the data and code necessary to follow along during the hands-on session.
-
-Completing these first three steps is required in order to be able to follow along with the hands-on presentation. It should take between 15-30 minutes to complete these tasks.
+If you wish to explore at your own pace, you can review the code and run it chunk by chunk, or create the report for a more guided experience (see Step V. below).
 
 IV. Introduction to R (optional: 90-120 minutes)
 ------------------------------------------------
@@ -48,6 +40,6 @@ It would also be highly beneficial to be familiar with the basics of R programmi
 V. Knit the Tutorial (optional: &lt; 5 minutes)
 -----------------------------------------------
 
-Finally, the .Rmd filed included with this course package can be assembled into an html report by cliking the Knit button inside RStudio.
+Finally, the .Rmd filed included with these course materials can be assembled into an html report by cliking the Knit button inside RStudio.
 
 ![Knit](images/knit.png)
