@@ -424,6 +424,7 @@ Next, we'll explore a different approach using base R functionality. This time w
 # However, there is a function to easily put the specimen column back into rownames
 heat_df <- dplyr::filter(otu_df, tissue_type == "Lung") %>%
   droplevels() %>% 
+  remove_rownames() %>%
   column_to_rownames("specimen") %>% # This turns the specimen column into the rownames.
   select(otu_order[1:20]) # Keep only the top 20 OTUs.
 
@@ -876,7 +877,7 @@ Rarefaction curves can also be used to explore α-diversity. First, the data nee
 rarefy_agg <- rarefy(dplyr::select(otu_raw, -label, -numOtus), sample = 1:1000) %>% # subsample for each number in 1:1000; an alternative is to set sample = to the integer length of primary interest, e.g. 1000
   data.frame(row.names = rownames(otu_good)) %>% # Use cleaned up rownames from otu_good rather than messy names from otu_raw
   rownames_to_column("specimen") %>%
-  pivot_longer(-specimen, names_to = "Sample_Seq_Num", names_prefix = "N", names_ptypes = list(Sample_Seq_Num = numeric()), values_to = "Unique_Species") %>% # Transform data from long to wide format
+  pivot_longer(-specimen, names_to = "Sample_Seq_Num", names_prefix = "N", names_transform = list(Sample_Seq_Num = as.numeric), values_to = "Unique_Species") %>% # Transform data from long to wide format
   left_join(dplyr::select(otu_df, specimen, reagent_tissue, vendor, tissue_type), by = "specimen") %>%  # Join reagent_tissue, vendor, and tissue_type columns
   dplyr::filter((reagent_tissue == "Control") | (tissue_type == "Lung")) %>% # Keep only lung specimens and negative controls
   group_by(vendor, Sample_Seq_Num) %>%
